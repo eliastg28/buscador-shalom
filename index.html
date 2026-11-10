@@ -336,7 +336,7 @@ footer.site p { margin: 4px 0; }
     <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Seleccionar archivo Excel o CSV">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/></svg>
       <p class="dz-title">Arrastra tu archivo aquí o <span class="link">selecciónalo</span></p>
-      <p class="dz-sub">Excel (.xlsx, .xls) o CSV con las columnas: Nombre y apellidos · Número de teléfono · Departamento · Provincia · Distrito · Dirección · Referencia</p>
+      <p class="dz-sub">Excel (.xlsx, .xls) o CSV con las columnas: Número de teléfono · Nombre y apellidos · Departamento · Provincia · Distrito · Dirección · Referencia</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt,text/csv" hidden>
     </div>
     <div id="fileInfo" class="file-info" hidden>
@@ -2191,7 +2191,8 @@ function exportExcel() {
 function downloadTemplate(ev) {
   ev.preventDefault();
   if (typeof XLSX === 'undefined') { toast('No se pudo cargar SheetJS. Revisa tu conexión.', 'error'); return; }
-  const labels = FIELDS.filter((f) => !f.legacy).map((f) => (f.key === 'whatsapp' ? 'Número de teléfono' : f.key === 'nombre' ? 'Nombre y apellidos' : f.label));
+  // Mismo orden que el formulario de la tienda: primero el teléfono y luego el nombre
+  const labels = ['Número de teléfono', 'Nombre y apellidos', 'Departamento', 'Provincia', 'Distrito', 'Dirección', 'Referencia'];
   const ws = XLSX.utils.aoa_to_sheet([labels]);
   ws['!cols'] = labels.map((l) => ({ wch: Math.max(18, l.length + 4) }));
   const wb = XLSX.utils.book_new();

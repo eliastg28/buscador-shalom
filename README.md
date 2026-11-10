@@ -39,7 +39,7 @@ python generar_excel_prueba.py
 
 La app detecta las columnas por su nombre. El formato recomendado es el de Pedidos Shopify:
 
-`NOMBRE Y APELLIDOS · NÚMERO DE TELÉFONO · DEPARTAMENTO · PROVINCIA · DISTRITO · DIRECCIÓN · REFERENCIA`
+`NÚMERO DE TELÉFONO · NOMBRE Y APELLIDOS · DEPARTAMENTO · PROVINCIA · DISTRITO · DIRECCIÓN · REFERENCIA`
 
 Las demás columnas (producto, precio, etc.) se conservan en el Excel descargado. También se acepta el formato antiguo con una sola columna "Ciudad y/o Distrito".
 
