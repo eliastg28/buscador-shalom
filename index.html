@@ -211,6 +211,16 @@ th.num { text-align: right; }
 .spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .tag { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; background: var(--mid-bg); color: var(--mid); }
+.copy-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.btn-copy.copied { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.msg-box { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.msg-box summary { cursor: pointer; padding: 12px 14px; font-weight: 600; font-size: 14px; list-style: none; display: flex; align-items: center; gap: 8px; }
+.msg-box summary::-webkit-details-marker { display: none; }
+.msg-box summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+.msg-box[open] summary::before { transform: rotate(90deg); }
+.msg-box .msg-body { padding: 0 14px 14px; }
+.msg-box textarea { width: 100%; min-height: 230px; resize: vertical; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; line-height: 1.45; }
+.msg-box code { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 0 4px; }
 .maplinks { display: flex; flex-direction: column; gap: 4px; white-space: nowrap; }
 .maplinks a { font-weight: 600; font-size: 13px; }
 .empty { padding: 28px; text-align: center; color: var(--muted); }
@@ -377,6 +387,18 @@ footer.site p { margin: 4px 0; }
         Descargar Excel
       </button>
     </div>
+    <details class="msg-box" id="msgBox">
+      <summary>Mensaje para WhatsApp</summary>
+      <div class="msg-body">
+        <p class="hint" style="margin:0 0 8px">Cada cliente tiene un botón <b>Copiar mensaje</b> que arma este texto con su nombre y su agencia. Puedes editarlo: se guarda en este navegador.
+          Campos disponibles: <code>{nombre}</code> primer nombre del cliente, <code>{agencia}</code> nombre de la agencia,
+          <code>{detalle}</code> la referencia de la agencia (o su dirección si Shalom no publica referencia),
+          <code>{referencia}</code>, <code>{direccion}</code>, <code>{distrito}</code>.</p>
+        <label class="sr-only" for="msgTemplate">Plantilla del mensaje</label>
+        <textarea id="msgTemplate" spellcheck="false"></textarea>
+        <div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" id="msgReset">Restaurar mensaje original</button></div>
+      </div>
+    </details>
     <div class="stats" id="stats"></div>
     <div class="toolbar">
       <input type="search" id="filterText" placeholder="Filtrar por cliente, distrito o agencia…" aria-label="Filtrar resultados">
@@ -1879,8 +1901,11 @@ function rowHtml(i) {
   const wa = waLink(f.whatsapp);
   const place = placeText(f);
   const agPlace = a ? [a.distrito, a.provincia, a.departamento].filter(Boolean).join(', ') : '';
+  const copyBtn = a && (r.status === 'done' || r.status === 'error')
+    ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="Copia el mensaje de WhatsApp con esta agencia">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button></div>`
+    : '';
   const agCell = a
-    ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}`
+    ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}${copyBtn}`
     : (r.status === 'done' || r.status === 'error' ? '<span class="sub">Sin agencia sugerida</span>' : '<span class="sub">—</span>');
   const links = a
     ? `<div class="maplinks"><a href="${esc(mapsAgencyUrl(a))}" target="_blank" rel="noopener" title="Abrir la ficha de la agencia en Google Maps">Ver agencia</a>${r.geo ? `<a href="${routeUrl(r.geo, a)}" target="_blank" rel="noopener" title="Cómo llegar desde la ubicación del cliente hasta la agencia">Ver ruta</a>` : ''}</div>`
@@ -2118,6 +2143,89 @@ function editorPickAgency(id) {
 }
 
 /* ============================================================
+   MENSAJE PARA WHATSAPP
+   ============================================================ */
+const MSG_STORAGE = 'buscadorShalom.mensaje.v1';
+const DEFAULT_MESSAGE = [
+  '¡Hola {nombre} 😊 Te saluda Fiorella de TodoClick.',
+  '',
+  '✅ RECIBIMOS TU PEDIDO',
+  '',
+  'Para provincias enviamos por agencia Shalom con pago contra entrega. Ya ubiqué la agencia más cercana a ti 👇',
+  '',
+  '📍 SHALOM - {agencia}',
+  '{detalle}',
+  '',
+  '¿Te queda bien para recoger tu pedido? 😊',
+].join('\n');
+
+function messageTemplate() {
+  const t = $('#msgTemplate').value;
+  return t.trim() ? t : DEFAULT_MESSAGE;
+}
+
+// "a 100 mtrs. de la piscina wanchaq" → "A 100 Mtrs. De La Piscina Wanchaq"
+function titleCase(s) {
+  return clean(s).toLowerCase().replace(/(^|[\s(\/"'-])([a-záéíóúñü])/g, (m, p, c) => p + c.toUpperCase());
+}
+
+function firstName(full) {
+  const w = clean(full).split(' ').find((x) => /[a-záéíóúñü]/i.test(x)) || '';
+  return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
+}
+
+function buildMessage(i) {
+  const r = state.results[i];
+  const a = r && r.agency;
+  if (!a) return '';
+  const f = rowFields(i);
+  const referencia = a.referencia ? titleCase(a.referencia) : '';
+  const direccion = a.direccion ? titleCase(a.direccion) : '';
+  const values = {
+    nombre: firstName(f.nombre),
+    agencia: a.nombre.toUpperCase(),
+    referencia,
+    direccion,
+    distrito: titleCase(a.distrito),
+    detalle: referencia ? `REFERENCIA-  ${referencia}` : `DIRECCIÓN-  ${direccion}`,
+  };
+  return messageTemplate()
+    .replace(/\{(nombre|agencia|referencia|direccion|distrito|detalle)\}/gi, (m, k) => values[k.toLowerCase()] || '')
+    .replace(/[ \t]+\n/g, '\n')        // espacios sobrantes al final de cada línea
+    .replace(/¡Hola\s+😊/g, '¡Hola 😊')  // si no hay nombre
+    .trim();
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+  } catch { /* se usa el método alternativo */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  ta.remove();
+  return ok;
+}
+
+async function copyMessage(i) {
+  const text = buildMessage(i);
+  if (!text) { toast('Este cliente todavía no tiene agencia sugerida.', 'error'); return; }
+  if (await copyText(text)) {
+    state.results[i].copied = true;
+    updateRow(i);
+    toast(`Mensaje copiado para ${firstName(rowFields(i).nombre) || 'el cliente'}. Pégalo en WhatsApp.`, 'ok');
+  } else {
+    toast('No se pudo copiar automáticamente. Revisa los permisos del navegador.', 'error');
+  }
+}
+
+/* ============================================================
    EXPORTACIÓN A EXCEL
    ============================================================ */
 function exportExcel() {
@@ -2310,6 +2418,8 @@ function bindEvents() {
   });
 
   $('#tbody').addEventListener('click', (e) => {
+    const c = e.target.closest('[data-copy]');
+    if (c) { copyMessage(Number(c.dataset.copy)); return; }
     const b = e.target.closest('[data-edit]');
     if (b && !state.processing) openEditor(Number(b.dataset.edit));
   });
@@ -2327,6 +2437,20 @@ function bindEvents() {
 }
 
 function init() {
+  let savedMsg = '';
+  try { savedMsg = localStorage.getItem(MSG_STORAGE) || ''; } catch { savedMsg = ''; }
+  $('#msgTemplate').value = savedMsg || DEFAULT_MESSAGE;
+  $('#msgTemplate').addEventListener('input', () => {
+    try {
+      if ($('#msgTemplate').value === DEFAULT_MESSAGE) localStorage.removeItem(MSG_STORAGE);
+      else localStorage.setItem(MSG_STORAGE, $('#msgTemplate').value);
+    } catch { /* sin almacenamiento: el cambio dura hasta recargar */ }
+  });
+  $('#msgReset').addEventListener('click', () => {
+    $('#msgTemplate').value = DEFAULT_MESSAGE;
+    try { localStorage.removeItem(MSG_STORAGE); } catch { /* sin almacenamiento */ }
+    toast('Se restauró el mensaje original.');
+  });
   $('#deptList').innerHTML = DEPARTAMENTOS.map((d) => `<option value="${esc(d)}">`).join('');
   GeoCache.load();
   const settings = store.get(CONFIG.SETTINGS_KEY, {}) || {};
@@ -2343,7 +2467,7 @@ function init() {
 }
 
 // Acceso para pruebas desde la consola del navegador
-window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber };
+window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber, buildMessage };
 
 init();
 })();
