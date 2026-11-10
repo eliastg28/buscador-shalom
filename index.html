@@ -1,0 +1,2351 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Buscador de Agencias Shalom</title>
+<meta name="description" content="Sube un Excel o CSV con direcciones de clientes de todo el Perú y obtén la agencia Shalom más cercana a cada uno.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%231f5fbf' d='M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.5.3/papaparse.min.js" integrity="sha384-Jd2/X5FXVKahwaY2nivvw4LfSTg9idSj8yNXWtT4qef0fHSYr6M7M8bJAfbFYoMc" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #f0f3f8;
+  --border: #dce2ec;
+  --border-strong: #c3cbd9;
+  --text: #16203a;
+  --muted: #5a6479;
+  --accent: #1f5fbf;
+  --accent-hover: #174c99;
+  --accent-soft: #e7eefa;
+  --accent-contrast: #ffffff;
+  --ok: #067647;      --ok-bg: #e5f5ec;
+  --mid: #8a5300;     --mid-bg: #fdf2d9;
+  --low: #b93815;     --low-bg: #fdede6;
+  --bad: #b42318;     --bad-bg: #fdeae8;
+  --pending: #5a6479; --pending-bg: #edf0f5;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 6px 20px rgba(16, 24, 40, .06);
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1220;
+    --surface: #141b2d;
+    --surface-2: #1a2338;
+    --border: #28334d;
+    --border-strong: #3a4766;
+    --text: #e6ebf5;
+    --muted: #9ba6bd;
+    --accent: #7ea8ff;
+    --accent-hover: #a3c0ff;
+    --accent-soft: rgba(126, 168, 255, .14);
+    --accent-contrast: #0b1020;
+    --ok: #5ad09a;      --ok-bg: rgba(90, 208, 154, .14);
+    --mid: #f2c14e;     --mid-bg: rgba(242, 193, 78, .14);
+    --low: #fb9a6b;     --low-bg: rgba(251, 154, 107, .14);
+    --bad: #f7837a;     --bad-bg: rgba(247, 131, 122, .14);
+    --pending: #9ba6bd; --pending-bg: rgba(155, 166, 189, .12);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+a:hover { color: var(--accent-hover); }
+h1, h2, h3 { margin: 0; line-height: 1.25; }
+code { font-size: .92em; }
+.container { width: 100%; max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+/* Encabezado */
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+.topbar-inner { display: flex; align-items: center; gap: 16px; padding-top: 18px; padding-bottom: 18px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.brand-icon { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.brand h1 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+
+main.container { padding-top: 24px; padding-bottom: 32px; display: grid; gap: 20px; }
+
+/* Tarjetas */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; min-width: 0; }
+.card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.card-head h2 { font-size: 17px; font-weight: 650; }
+.card-head .spacer { flex: 1; }
+.step { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: var(--accent); color: var(--accent-contrast); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.block { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+.block h3 { font-size: 14px; font-weight: 650; margin-bottom: 10px; }
+.hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+.status-line { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; }
+.status-line .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; background: var(--pending); }
+.status-line.ok .dot { background: var(--ok); }
+.status-line.error .dot { background: var(--bad); }
+.status-line.loading .dot { background: var(--mid); animation: pulse 1s infinite alternate; }
+@keyframes pulse { to { opacity: .3; } }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Botones y campos */
+.btn { appearance: none; border: 1px solid transparent; border-radius: 10px; padding: 10px 16px; font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: var(--accent-contrast); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); color: var(--accent-contrast); }
+.btn-secondary { background: var(--accent-soft); color: var(--accent); }
+.btn-secondary:hover:not(:disabled) { border-color: var(--accent); }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--border-strong); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: transparent; color: var(--bad); border-color: currentColor; }
+.btn-danger:hover:not(:disabled) { background: var(--bad-bg); }
+.btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+.btn:focus-visible, input:focus-visible, select:focus-visible, .dropzone:focus-visible, .stat:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 6px; }
+input[type=text], input[type=password], input[type=search], select {
+  width: 100%; min-width: 0; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 14px;
+}
+.input-row { display: flex; gap: 8px; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 10px; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.segmented label { position: relative; cursor: pointer; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented span { display: block; text-align: center; padding: 10px 8px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); font-size: 14px; font-weight: 600; }
+.segmented span small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.segmented input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.segmented input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.segmented input:disabled + span { opacity: .6; cursor: not-allowed; }
+
+/* Zona de carga */
+.dropzone { border: 2px dashed var(--border-strong); border-radius: 14px; padding: 34px 20px; text-align: center; cursor: pointer; background: var(--surface-2); transition: border-color .15s, background .15s; }
+.dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+.dropzone svg { color: var(--accent); }
+.dz-title { font-weight: 650; font-size: 16px; margin: 10px 0 4px; }
+.dz-title .link { color: var(--accent); text-decoration: underline; }
+.dz-sub { color: var(--muted); font-size: 13px; margin: 0; }
+.file-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); }
+.file-info .fname { font-weight: 650; overflow-wrap: anywhere; }
+.file-info .meta { color: var(--muted); font-size: 13px; }
+.file-info .spacer { flex: 1; }
+.file-info select { width: auto; }
+
+/* Mapeo de columnas */
+.map-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
+.map-grid .label { margin-top: 0; }
+.map-grid .req { color: var(--bad); }
+.process-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.alert { margin: 14px 0 0; padding: 12px 14px; border-radius: 10px; font-size: 14px; border: 1px solid transparent; }
+.alert.warn { background: var(--mid-bg); color: var(--mid); }
+.alert.error { background: var(--bad-bg); color: var(--bad); }
+.alert.ok { background: var(--ok-bg); color: var(--ok); }
+.alert.info { background: var(--accent-soft); color: var(--text); }
+
+/* Progreso */
+.progress-wrap { margin-top: 16px; }
+.progress { height: 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--accent); transition: width .3s ease; }
+.progress-wrap.running .progress-fill { background-size: 40px 40px, auto; background-image: linear-gradient(135deg, rgba(255,255,255,.22) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.22) 50%, rgba(255,255,255,.22) 75%, transparent 75%, transparent), linear-gradient(90deg, var(--accent), var(--accent)); animation: stripes 1s linear infinite; }
+@keyframes stripes { to { background-position: 40px 0, 0 0; } }
+.progress-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.progress-meta strong { color: var(--text); }
+
+/* Resumen */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat { appearance: none; font: inherit; text-align: left; cursor: pointer; border: 1px solid var(--border); background: var(--surface-2); border-radius: 12px; padding: 12px 14px; color: var(--text); }
+.stat:hover { border-color: var(--border-strong); }
+.stat[aria-pressed=true] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.stat .n { display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .l { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.stat .l i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--pending); }
+.stat.ok .l i { background: var(--ok); }
+.stat.mid .l i { background: var(--mid); }
+.stat.low .l i { background: var(--low); }
+.stat.bad .l i { background: var(--bad); }
+.toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar input[type=search] { flex: 1 1 260px; width: auto; }
+.toolbar .count { color: var(--muted); font-size: 13px; }
+
+/* Tabla */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+table.results { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.results th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 650; padding: 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.results td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+table.results tbody tr:last-child td { border-bottom: 0; }
+table.results tbody tr.cat-ok td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
+table.results tbody tr.cat-mid td:first-child { box-shadow: inset 3px 0 0 var(--mid); }
+table.results tbody tr.cat-low td:first-child { box-shadow: inset 3px 0 0 var(--low); }
+table.results tbody tr.cat-bad td:first-child { box-shadow: inset 3px 0 0 var(--bad); }
+table.results tbody tr.cat-processing { background: var(--accent-soft); }
+.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+th.num { text-align: right; }
+.c-idx { color: var(--muted); width: 34px; white-space: nowrap; }
+.col-client { min-width: 120px; }
+.col-wa { white-space: nowrap; }
+.col-addr { min-width: 180px; }
+.col-agency { min-width: 150px; }
+.col-agaddr { min-width: 170px; }
+.col-prec { min-width: 150px; }
+.prec-action { margin-top: 8px; }
+.sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.ag-name { font-weight: 650; }
+.km { font-weight: 700; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 650; white-space: nowrap; background: var(--pending-bg); color: var(--pending); }
+.badge.ok { background: var(--ok-bg); color: var(--ok); }
+.badge.mid { background: var(--mid-bg); color: var(--mid); }
+.badge.low { background: var(--low-bg); color: var(--low); }
+.badge.bad { background: var(--bad-bg); color: var(--bad); }
+.badge.processing { background: var(--accent-soft); color: var(--accent); }
+.spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.tag { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; background: var(--mid-bg); color: var(--mid); }
+.maplinks { display: flex; flex-direction: column; gap: 4px; white-space: nowrap; }
+.maplinks a { font-weight: 600; font-size: 13px; }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+
+/* Diálogo */
+dialog { width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 32px); border: 1px solid var(--border); border-radius: 16px; padding: 0; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+dialog::backdrop { background: rgba(10, 15, 30, .55); }
+.dlg-body { padding: 20px 22px 22px; }
+.dlg-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.dlg-head h2 { font-size: 18px; flex: 1; }
+.icon-btn { appearance: none; background: transparent; border: 0; color: var(--muted); font-size: 24px; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.icon-btn:hover { color: var(--text); background: var(--surface-2); }
+.dlg-client { color: var(--muted); margin: 0 0 6px; font-size: 14px; }
+.dlg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.dlg-grid .full { grid-column: 1 / -1; }
+.dlg-section { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 14px; }
+.dlg-section h3 { font-size: 14px; margin-bottom: 4px; }
+.dlg-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.choices { display: grid; gap: 8px; margin-top: 10px; }
+.choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.choice:hover { border-color: var(--border-strong); }
+.choice input { margin-top: 4px; accent-color: var(--accent); }
+.choice.sel { border-color: var(--accent); background: var(--accent-soft); }
+.choice .grow { flex: 1; min-width: 0; }
+.choice .km { white-space: nowrap; }
+
+/* Avisos flotantes */
+#toasts { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 8px; z-index: 50; max-width: min(420px, calc(100vw - 32px)); }
+.toast { padding: 12px 14px; border-radius: 10px; background: var(--text); color: var(--surface); font-size: 14px; box-shadow: var(--shadow); animation: toastIn .2s ease; }
+.toast.error { background: #b42318; color: #fff; }
+.toast.ok { background: #067647; color: #fff; }
+@keyframes toastIn { from { transform: translateY(8px); opacity: 0; } }
+
+footer.site { color: var(--muted); font-size: 13px; padding-bottom: 8px; }
+footer.site p { margin: 4px 0; }
+
+@media (max-width: 960px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .map-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .table-wrap { border: 0; overflow: visible; }
+  table.results thead { display: none; }
+  table.results, table.results tbody, table.results tr, table.results td { display: block; width: 100%; }
+  table.results tbody tr { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; padding: 8px 14px; background: var(--surface); }
+  table.results tbody tr.cat-ok { border-left: 4px solid var(--ok); }
+  table.results tbody tr.cat-mid { border-left: 4px solid var(--mid); }
+  table.results tbody tr.cat-low { border-left: 4px solid var(--low); }
+  table.results tbody tr.cat-bad { border-left: 4px solid var(--bad); }
+  table.results td { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 10px; padding: 8px 0; border-bottom: 1px dashed var(--border); text-align: left; min-width: 0; }
+  table.results td:last-child { border-bottom: 0; }
+  table.results tbody tr:last-child td:not(:last-child) { border-bottom: 1px dashed var(--border); }
+  table.results td::before { content: attr(data-label); grid-row: 1 / span 8; font-size: 12px; font-weight: 650; color: var(--muted); padding-top: 2px; }
+  table.results td > * { grid-column: 2; justify-self: start; max-width: 100%; }
+  table.results td.c-idx { display: none; }
+  table.results td.empty { display: block; }
+  table.results td.empty::before { content: none; }
+  .num { text-align: left; }
+  .maplinks { flex-direction: row; gap: 14px; }
+}
+@media (max-width: 600px) {
+  .container { padding-left: 16px; padding-right: 16px; }
+  .card { padding: 16px; }
+  .brand h1 { font-size: 18px; }
+  .map-grid, .dlg-grid { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .segmented { grid-template-columns: 1fr; }
+  .dlg-body { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+      </span>
+      <div>
+        <h1>Buscador de Agencias Shalom</h1>
+        <p>Sube tu Excel o CSV de clientes y obtén la agencia Shalom más cercana a cada uno, en todo el Perú.</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- Paso 1 -->
+  <section class="card" aria-labelledby="t-config">
+    <div class="card-head"><span class="step">1</span><h2 id="t-config">Configuración</h2></div>
+    <div class="grid-2">
+      <div class="block">
+        <h3>Base de agencias</h3>
+        <div id="agStatus" class="status-line loading"><span class="dot"></span><span class="txt">Cargando <code>agencias_shalom.json</code>…</span></div>
+        <div class="row-actions">
+          <label class="btn btn-ghost btn-sm">Cargar otro JSON de agencias<input type="file" id="agFile" accept=".json,application/json" hidden></label>
+        </div>
+      </div>
+      <div class="block">
+        <h3>Servicio para ubicar direcciones</h3>
+        <div class="segmented" role="radiogroup" aria-label="Servicio de geolocalización">
+          <label><input type="radio" name="provider" value="nominatim" checked><span>OpenStreetMap<small>Gratis · 1 consulta/seg</small></span></label>
+          <label><input type="radio" name="provider" value="google"><span>Google Maps<small>Requiere API Key</small></span></label>
+        </div>
+        <div id="googleBox" hidden>
+          <label class="label" for="gKey">API Key de Google Maps</label>
+          <div class="input-row">
+            <input id="gKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+            <button type="button" class="btn btn-ghost btn-sm" id="gKeyToggle">Mostrar</button>
+          </div>
+          <label class="check"><input type="checkbox" id="gKeyRemember"> Recordar la clave en este navegador</label>
+          <p class="hint">Activa <b>Maps JavaScript API</b> y <b>Geocoding API</b> en Google Cloud y restringe la clave a tu dominio de GitHub Pages.</p>
+        </div>
+        <p class="hint" id="providerHint"></p>
+        <div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" id="btnClearCache">Borrar caché de ubicaciones</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Paso 2 -->
+  <section class="card" aria-labelledby="t-file">
+    <div class="card-head"><span class="step">2</span><h2 id="t-file">Archivo de clientes</h2></div>
+    <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Seleccionar archivo Excel o CSV">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/></svg>
+      <p class="dz-title">Arrastra tu archivo aquí o <span class="link">selecciónalo</span></p>
+      <p class="dz-sub">Excel (.xlsx, .xls) o CSV con las columnas: Nombre y apellidos · Número de teléfono · Departamento · Provincia · Distrito · Dirección · Referencia</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt,text/csv" hidden>
+    </div>
+    <div id="fileInfo" class="file-info" hidden>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+      <div><div class="fname" id="fileName"></div><div class="meta" id="fileMeta"></div></div>
+      <div class="spacer"></div>
+      <label id="sheetWrap" hidden><span class="sr-only">Hoja</span><select id="sheetSelect"></select></label>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnRemoveFile">Quitar</button>
+    </div>
+    <p class="hint">¿No tienes el formato? <a href="#" id="dlTemplate">Descarga la plantilla vacía</a>.</p>
+  </section>
+
+  <!-- Paso 3 -->
+  <section class="card" id="cardMap" aria-labelledby="t-map" hidden>
+    <div class="card-head"><span class="step">3</span><h2 id="t-map">Columnas y procesamiento</h2></div>
+    <p class="hint" style="margin:0 0 14px">Las columnas se detectaron automáticamente. Corrige cualquier asignación si hace falta.</p>
+    <div class="map-grid" id="mapGrid"></div>
+    <div id="mapWarn" class="alert warn" hidden></div>
+    <div class="process-bar">
+      <button type="button" class="btn btn-primary" id="btnProcess">Buscar agencias más cercanas</button>
+      <button type="button" class="btn btn-danger" id="btnStop" hidden>Detener</button>
+      <span class="hint" id="estimate" style="margin:0"></span>
+    </div>
+    <div id="progressWrap" class="progress-wrap" hidden>
+      <div class="progress" id="progressBar" role="progressbar" aria-label="Progreso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-meta"><span id="progressText"></span><span id="progressRight"></span></div>
+    </div>
+    <div id="fatal" class="alert error" role="alert" hidden></div>
+  </section>
+
+  <!-- Paso 4 -->
+  <section class="card" id="cardResults" aria-labelledby="t-res" hidden>
+    <div class="card-head">
+      <span class="step">4</span><h2 id="t-res">Resultados</h2>
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-primary" id="btnExport">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Descargar Excel
+      </button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <input type="search" id="filterText" placeholder="Filtrar por cliente, distrito o agencia…" aria-label="Filtrar resultados">
+      <span class="count" id="filterCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="results">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>WhatsApp</th>
+            <th>Dirección</th>
+            <th>Agencia Shalom Sugerida</th>
+            <th>Dirección Agencia</th>
+            <th class="num">Distancia (km)</th>
+            <th>Precisión</th>
+            <th>Link Google Maps</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="hint">La distancia es en línea recta (fórmula de Haversine). Revisa las filas marcadas como <b>Por revisar</b> o <b>No ubicados</b> con el botón <b>Corregir</b>.</p>
+  </section>
+
+  <footer class="site">
+    <p>Herramienta independiente, sin afiliación con Shalom Empresarial S.A.C. Confirma horarios y disponibilidad de la agencia antes de enviar.</p>
+    <p>Geolocalización: <a href="https://nominatim.org/" target="_blank" rel="noopener">Nominatim</a> con datos © colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (ODbL), o Google Maps con tu propia API Key.</p>
+  </footer>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlg-body">
+    <div class="dlg-head">
+      <h2 id="dlgTitle">Corregir ubicación</h2>
+      <button type="button" class="icon-btn" id="dlgClose" aria-label="Cerrar">×</button>
+    </div>
+    <p class="dlg-client" id="dlgClient"></p>
+    <div class="dlg-grid">
+      <div class="full"><label class="label" for="eDir">Dirección</label><input type="text" id="eDir"></div>
+      <div><label class="label" for="eDep">Departamento</label><input type="text" id="eDep" list="deptList"></div>
+      <div><label class="label" for="eProv">Provincia</label><input type="text" id="eProv"></div>
+      <div class="full"><label class="label" for="eDist">Distrito</label><input type="text" id="eDist"></div>
+      <div class="full"><label class="label" for="eRef">Referencia de dirección</label><input type="text" id="eRef"></div>
+    </div>
+    <div class="dlg-actions"><button type="button" class="btn btn-secondary" id="eSearch">Buscar de nuevo</button></div>
+
+    <div class="dlg-section">
+      <h3>¿Ya sabes dónde es?</h3>
+      <p class="hint" style="margin-top:0">Pega coordenadas (clic derecho en Google Maps y copiar) o un enlace largo de Google Maps.</p>
+      <div class="input-row" style="margin-top:8px">
+        <input type="text" id="eCoords" placeholder="-8.11167, -79.02869">
+        <button type="button" class="btn btn-secondary" id="eUseCoords">Usar</button>
+      </div>
+    </div>
+
+    <div class="dlg-section" id="eAgBox">
+      <h3>Agencias cercanas</h3>
+      <p class="hint" style="margin-top:0">Elige otra agencia si el cliente prefiere una distinta.</p>
+      <div class="choices" id="eAgencies"></div>
+    </div>
+    <div id="eMsg" class="alert" hidden></div>
+  </div>
+</dialog>
+
+<datalist id="deptList"></datalist>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================================================
+   CONFIGURACIÓN
+   ============================================================ */
+const CONFIG = {
+  AGENCIAS_URL: 'agencias_shalom.json',
+  NOMINATIM_URL: 'https://nominatim.openstreetmap.org/search',
+  NOMINATIM_DELAY_MS: 1100,        // Política de Nominatim: máximo 1 consulta por segundo
+  GOOGLE_DELAY_MS: 250,
+  GOOGLE_TIMEOUT_MS: 15000,
+  MAX_RETRIES: 3,
+  PHOTON_URL: 'https://photon.komoot.io/api/',
+  PHOTON_DELAY_MS: 400,
+  CACHE_KEY: 'buscadorShalom.geocache.v2',
+  OLD_CACHE_KEYS: ['buscadorShalom.geocache.v1'],
+  CACHE_MAX_ENTRIES: 1500,
+  CACHE_TTL_DAYS: 30,
+  CACHE_NEGATIVE_TTL_DAYS: 3,
+  SETTINGS_KEY: 'buscadorShalom.settings.v1',
+  GOOGLE_KEY_STORAGE: 'buscadorShalom.googleKey.v1',
+  MIN_SIMILARITY: 0.72,            // parecido mínimo entre lo escrito y el nombre en el mapa (0 a 1)
+  DISTRICT_MARGIN_KM: 1.5,         // margen alrededor del distrito para direcciones en el límite
+  DISTRICT_MIN_HALF_KM: 3,         // tamaño mínimo del área de búsqueda alrededor del distrito
+  STREET_NUMBER_SIM: 0.85,         // parecido mínimo para considerar que dos direcciones están en la misma calle
+  NUMBER_NEAR_MAX: 400,            // diferencia máxima de numeración para ubicar junto a un punto conocido (≈ 4 cuadras)
+  NUMBER_SPAN_MAX: 4000,           // distancia máxima en numeración entre dos puntos para interpolar
+};
+
+const DEPARTAMENTOS = ['Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco', 'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'];
+
+// Columnas del formulario y sinónimos aceptados para detectarlas
+const FIELDS = [
+  { key: 'nombre', label: 'Nombres y Apellidos', aliases: ['Nombres y Apellidos', 'Nombre y Apellidos', 'Nombre y Apellido', 'Nombres y Apellido', 'Apellidos y Nombres', 'Nombre Completo', 'Nombres', 'Nombre', 'Cliente', 'Destinatario'] },
+  { key: 'whatsapp', label: 'WhatsApp / Teléfono', aliases: ['WhatsApp', 'Número de WhatsApp', 'Numero WhatsApp', 'Número de teléfono', 'Teléfono', 'Celular', 'Número de celular', 'Teléfono celular', 'Móvil', 'WSP', 'Contacto'] },
+  { key: 'departamento', label: 'Departamento', aliases: ['Departamento', 'Región', 'Dpto', 'Depto', 'Departamento de entrega'] },
+  { key: 'provincia', label: 'Provincia', aliases: ['Provincia', 'Prov', 'Provincia de entrega'] },
+  { key: 'distrito', label: 'Distrito', aliases: ['Distrito', 'Dist', 'Distrito de entrega'] },
+  { key: 'ciudad', label: 'Ciudad y/o Distrito (formato antiguo)', legacy: true, aliases: ['Ciudad y/o Distrito', 'Ciudad y o Distrito', 'Ciudad/Distrito', 'Ciudad - Distrito', 'Ciudad', 'Localidad', 'Ciudad de entrega'] },
+  { key: 'direccion', label: 'Dirección', required: true, aliases: ['Dirección Completa', 'Dirección', 'Domicilio', 'Dirección de entrega', 'Dirección de envío'] },
+  { key: 'referencia', label: 'Referencia', aliases: ['Referencia de dirección', 'Referencia de la dirección', 'Referencia', 'Referencias', 'Punto de referencia', 'Ref'] },
+];
+
+// Campos relevantes según el formato del archivo (Departamento/Provincia/Distrito o el antiguo Ciudad y/o Distrito)
+function activeFields() {
+  const m = state.mapping || {};
+  if (m.ciudad && !m.distrito) return FIELDS.filter((f) => f.key !== 'provincia' && f.key !== 'distrito');
+  return FIELDS.filter((f) => !f.legacy || m.ciudad);
+}
+
+// Columnas nuevas que se agregan al Excel descargado
+const OUT_COLS = {
+  busqueda: 'Dirección de Búsqueda',
+  estado: 'Estado',
+  precision: 'Precisión Ubicación Cliente',
+  lat: 'Latitud Cliente',
+  lng: 'Longitud Cliente',
+  agencia: 'Agencia Shalom Sugerida',
+  agDir: 'Dirección Agencia',
+  agRef: 'Referencia Agencia',
+  agDist: 'Distrito Agencia',
+  agProv: 'Provincia Agencia',
+  agDep: 'Departamento Agencia',
+  agHorario: 'Horario Agencia',
+  km: 'Distancia (km)',
+  linkAg: 'Link Google Maps Agencia',
+  linkRuta: 'Link Ruta Cliente a Agencia',
+  otras: 'Otras Agencias Cercanas',
+  obs: 'Observación',
+};
+
+// Nivel de precisión de la ubicación del cliente
+const PREC = {
+  manual:     { rank: 6, label: 'Manual',         cat: 'ok'  },
+  exacta:     { rank: 5, label: 'Exacta',         cat: 'ok'  },
+  numeracion: { rank: 4.5, label: 'Por numeración', cat: 'ok' },
+  referencia: { rank: 4, label: 'Por referencia', cat: 'ok'  },
+  calle:      { rank: 3, label: 'Calle',          cat: 'mid' },
+  zona:       { rank: 2, label: 'Zona / Urb.',    cat: 'mid' },
+  distrito:   { rank: 1, label: 'Solo distrito',  cat: 'low' },
+};
+const CATS = {
+  all:     { label: 'Clientes' },
+  ok:      { label: 'Ubicados' },
+  mid:     { label: 'Aproximados' },
+  low:     { label: 'Por revisar' },
+  bad:     { label: 'No ubicados' },
+  pending: { label: 'Pendientes' },
+};
+const ESTADO_EXPORT = { ok: 'Ubicado', mid: 'Aproximado', low: 'Revisar', bad: 'No ubicado', pending: 'Pendiente', processing: 'Pendiente' };
+
+
+// Abreviaturas frecuentes en ciudades/distritos
+const CITY_ALIASES = {
+  'sjl': 'San Juan de Lurigancho', 'smp': 'San Martín de Porres', 'sjm': 'San Juan de Miraflores',
+  'ves': 'Villa El Salvador', 'vmt': 'Villa María del Triunfo', 'surco': 'Santiago de Surco',
+  'magdalena': 'Magdalena del Mar', 'jlo': 'José Leonardo Ortiz', 'jlbyr': 'José Luis Bustamante y Rivero',
+  'jlbr': 'José Luis Bustamante y Rivero', 'bustamante y rivero': 'José Luis Bustamante y Rivero',
+  'vlh': 'Víctor Larco Herrera', 'victor larco': 'Víctor Larco Herrera', 'sjb': 'San Juan Bautista',
+  'cercado': 'Lima', 'cercado de lima': 'Lima', 'lima cercado': 'Lima', 'cercado lima': 'Lima',
+};
+
+// Abreviaturas de vías y urbanizaciones (se expanden para que el geocodificador las entienda)
+const ABBREVIATIONS = [
+  [/\ba\.\s?a\.\s?h\.\s?h\.?(?=\s)/gi, 'Asentamiento Humano'],
+  [/\b(?:avenidad|abenida|avenid|aveninda|avinida|avenia|avnda|avd|ave)\.?(?=\s)/gi, 'Avenida'],
+  [/\b(?:jir[oó]m|gir[oó]n|jiron)\.?(?=\s)/gi, 'Jirón'],
+  [/\b(?:cale|calle)\.?(?=\s)/gi, 'Calle'],
+  [/\b(?:pasage|pasje|pasj)\.?(?=\s)/gi, 'Pasaje'],
+  [/\b(?:urbanisaci[oó]n|urbanizasi[oó]n|urbanizaci[oó]n|urbaniz|urbaniza)\.?(?=\s)/gi, 'Urbanización'],
+  [/\b(?:prolongasi[oó]n|prolongaci[oó]n|prolg|prlg)\.?(?=\s)/gi, 'Prolongación'],
+  [/\bp\.\s?j\.(?=\s)/gi, 'Pueblo Joven'],
+  [/\baa\.?\s?hh\.?(?=\s)|\ba\.\s?h\.(?=\s)/gi, 'Asentamiento Humano'],
+  [/\bav(?:da|en)?\.?(?=\s)/gi, 'Avenida'],
+  [/\bjr\.?(?=\s)|\bjir\.(?=\s)/gi, 'Jirón'],
+  [/\bca\.(?=\s)|\bcal\.(?=\s)|\bcll\.?(?=\s)/gi, 'Calle'],
+  [/\bpsje\.?(?=\s)|\bpje\.?(?=\s)|\bpsj\.?(?=\s)|\bpj\.(?=\s)/gi, 'Pasaje'],
+  [/\bprolong\.?(?=\s)|\bprol\.?(?=\s)/gi, 'Prolongación'],
+  [/\burb\.?(?=\s)/gi, 'Urbanización'],
+  [/\basoc\.?(?=\s)/gi, 'Asociación'],
+  [/\bcoop\.?(?=\s)/gi, 'Cooperativa'],
+  [/\bres\.(?=\s)/gi, 'Residencial'],
+  [/\bcarret\.?(?=\s)|\bcarr?\.(?=\s)/gi, 'Carretera'],
+  [/\bmcal\.?(?=\s)/gi, 'Mariscal'],
+  [/\bgral\.?(?=\s)/gi, 'General'],
+  [/\bcrnl\.?(?=\s)|\bcnel\.?(?=\s)/gi, 'Coronel'],
+  [/\bsta\.?(?=\s)/gi, 'Santa'],
+  [/\bsto\.?(?=\s)/gi, 'Santo'],
+  [/\bpdte\.?(?=\s)/gi, 'Presidente'],
+  [/\bstgo\.?(?=\s)/gi, 'Santiago'],
+  [/\bing\.(?=\s)/gi, 'Ingeniero'],
+  [/\bdr\.(?=\s)/gi, 'Doctor'],
+];
+
+// Palabras que no ayudan a ubicar una referencia ("frente al parque" es demasiado vago)
+const LANDMARK_LEAD = new Set('a al de del la el los las lo un una uno dos tres cuatro cinco seis siete ocho nueve diez media medio cuadra cuadras cdra cdras cda cdas mts mt metros m pasos min minutos frente enfrente cerca cerquita junto costado lado espalda espaldas detras atras altura antes despues pasando por en con esquina entre queda esta es justo exactamente ref referencia dentro mismo misma ubicado ubicada cruce interseccion hacia bajando subiendo llegando'.split(' '));
+const LANDMARK_TRAIL = new Set('a al de del la el los las y o e con en'.split(' '));
+const LANDMARK_STOP = new Set('de del la el los las y e o'.split(' '));
+const LANDMARK_GENERIC = new Set('parque plaza plazuela iglesia capilla templo mercado mercadillo colegio escuela jardin nido cuna bodega tienda minimarket grifo posta cancha losa esquina casa puerta porton reja rejas color verde azul rojo roja blanco blanca amarillo amarilla celeste naranja marron negro negra gris rosado edificio local negocio farmacia botica restaurante restaurant polleria panaderia ferreteria comisaria paradero ovalo avenida av calle jr jiron pasaje pista carretera lote mz manzana piso departamento dpto interior segundo tercer primer cuarto arbol poste letrero via numero nro n puente canal acequia chacra loza campo deportivo complejo'.split(' '));
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const round = (n, d) => Math.round(n * 10 ** d) / 10 ** d;
+const fmtKm = (km) => (km == null ? '—' : (km < 10 ? km.toFixed(2) : km.toFixed(1)) + ' km');
+const DEPTS_NORM = DEPARTAMENTOS.map(norm).sort((a, b) => b.length - a.length);
+
+const store = {
+  get(key, def = null) { try { const v = localStorage.getItem(key); return v === null ? def : JSON.parse(v); } catch { return def; } },
+  set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch { return false; } },
+  del(key) { try { localStorage.removeItem(key); } catch { /* sin almacenamiento */ } },
+};
+
+class FatalError extends Error {
+  constructor(message) { super(message); this.fatal = true; }
+}
+
+function abortError() {
+  return new DOMException('Proceso detenido', 'AbortError');
+}
+
+function abortableSleep(ms) {
+  const signal = state.abort && state.abort.signal;
+  return new Promise((resolve, reject) => {
+    if (signal && signal.aborted) { reject(abortError()); return; }
+    const t = setTimeout(resolve, ms);
+    if (signal) signal.addEventListener('abort', () => { clearTimeout(t); reject(abortError()); }, { once: true });
+  });
+}
+
+// Garantiza un intervalo mínimo entre consultas a cada servicio (rate limit)
+const lastCallAt = {};
+async function throttle(service, minMs) {
+  const wait = (lastCallAt[service] || 0) + minMs - Date.now();
+  if (wait > 0) await abortableSleep(wait);
+  lastCallAt[service] = Date.now();
+}
+
+// Fórmula de Haversine: distancia en km entre dos puntos (lat/lng en grados)
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371.0088;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function normDept(s) {
+  const n = norm(s).replace(/\bcuzco\b/g, 'cusco');
+  if (!n) return '';
+  for (const d of DEPTS_NORM) {
+    if (new RegExp(`(^| )${d}( |$)`).test(n)) return d;
+  }
+  return n;
+}
+
+// Lima y Callao se consideran equivalentes (es común que el cliente escriba "Lima" para el Callao)
+function sameDept(a, b) {
+  const x = normDept(a);
+  const y = normDept(b);
+  if (!x || !y) return true;
+  const fold = (v) => (v === 'callao' ? 'lima' : v);
+  return fold(x) === fold(y);
+}
+
+function toNum(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && v.trim()) return Number(v.trim().replace(',', '.'));
+  return NaN;
+}
+
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), type === 'error' ? 7000 : 4000);
+}
+
+// Abre la ficha del negocio en Google Maps (fotos, horario, reseñas) buscando "Shalom <agencia>, <distrito>, <departamento>".
+// Si Google no identifica una sola ficha, muestra la lista de agencias Shalom de esa zona.
+function mapsAgencyUrl(a) {
+  const nombre = /^shalom\b/i.test(a.nombre) ? a.nombre : `Shalom ${a.nombre}`;
+  const query = [nombre, a.distrito, a.departamento].filter(Boolean).join(', ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+// La ruta usa las coordenadas exactas del cliente y de la agencia
+function routeUrl(g, a) {
+  return `https://www.google.com/maps/dir/?api=1&origin=${round(g.lat, 6)},${round(g.lng, 6)}&destination=${a.lat},${a.lng}`;
+}
+function waLink(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (d.length === 9 && d[0] === '9') d = '51' + d;
+  return d.length === 11 && d.startsWith('519') ? `https://wa.me/${d}` : null;
+}
+function formatDuration(sec) {
+  if (!isFinite(sec) || sec <= 0) return '';
+  if (sec < 60) return `${Math.max(1, Math.round(sec))} s`;
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min${s ? ' ' + s + ' s' : ''}`;
+}
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+const state = {
+  agencias: [],
+  fileName: '',
+  workbook: null,
+  sheetName: '',
+  headers: [],
+  rows: [],
+  mapping: {},
+  results: [],
+  processing: false,
+  abort: null,
+  provider: 'nominatim',
+  filterCat: 'all',
+  filterText: '',
+  editIndex: -1,
+};
+
+function newResult() {
+  return { status: 'pending', searchText: '', geo: null, agency: null, km: null, alternatives: [], note: '', edits: null, manualGeo: null, manualAgencyId: null, districtPriority: false };
+}
+
+/* ============================================================
+   CACHÉ DE GEOLOCALIZACIÓN (localStorage)
+   ============================================================ */
+const GeoCache = {
+  data: {},
+  dirty: false,
+  load() {
+    CONFIG.OLD_CACHE_KEYS.forEach((k) => store.del(k));
+    const d = store.get(CONFIG.CACHE_KEY, {});
+    this.data = d && typeof d === 'object' ? d : {};
+  },
+  get(key) {
+    const e = this.data[key];
+    if (!e) return undefined;
+    const ttlDays = e.v && e.v.length ? CONFIG.CACHE_TTL_DAYS : CONFIG.CACHE_NEGATIVE_TTL_DAYS;
+    if (Date.now() - e.t > ttlDays * 864e5) { delete this.data[key]; this.dirty = true; return undefined; }
+    return e.v;
+  },
+  set(key, value) {
+    this.data[key] = { t: Date.now(), v: value };
+    this.dirty = true;
+  },
+  save() {
+    if (!this.dirty) return;
+    let keys = Object.keys(this.data);
+    if (keys.length > CONFIG.CACHE_MAX_ENTRIES) {
+      keys.sort((a, b) => this.data[a].t - this.data[b].t);
+      keys.slice(0, keys.length - CONFIG.CACHE_MAX_ENTRIES).forEach((k) => delete this.data[k]);
+    }
+    if (!store.set(CONFIG.CACHE_KEY, this.data)) {
+      keys = Object.keys(this.data).sort((a, b) => this.data[a].t - this.data[b].t);
+      keys.slice(0, Math.ceil(keys.length / 2)).forEach((k) => delete this.data[k]);
+      store.set(CONFIG.CACHE_KEY, this.data);
+    }
+    this.dirty = false;
+  },
+  clear() {
+    this.data = {};
+    this.dirty = false;
+    store.del(CONFIG.CACHE_KEY);
+  },
+  size() { return Object.keys(this.data).length; },
+};
+
+/* ============================================================
+   AGENCIAS
+   ============================================================ */
+function parseAgencias(json) {
+  const list = Array.isArray(json) ? json : (json && Array.isArray(json.agencias) ? json.agencias : null);
+  if (!list) throw new Error('El JSON debe ser una lista de agencias o un objeto con la propiedad "agencias".');
+  const out = [];
+  let invalid = 0;
+  list.forEach((a, i) => {
+    if (!a || typeof a !== 'object') { invalid++; return; }
+    const lat = toNum(a.latitud ?? a.lat ?? a.latitude);
+    const lng = toNum(a.longitud ?? a.lng ?? a.lon ?? a.longitude);
+    if (!isFinite(lat) || !isFinite(lng) || lat < -18.6 || lat > 0.4 || lng < -81.6 || lng > -68.4) { invalid++; return; }
+    const horarios = [clean(a.horario_lv), clean(a.horario_dom) ? `Dom: ${clean(a.horario_dom)}` : ''].filter(Boolean).join(' | ');
+    out.push({
+      id: clean(a.id) || `AG-${i + 1}`,
+      nombre: clean(a.nombre) || `Agencia ${i + 1}`,
+      departamento: clean(a.departamento),
+      provincia: clean(a.provincia),
+      distrito: clean(a.distrito),
+      direccion: clean(a.direccion),
+      referencia: clean(a.referencia),
+      horario: clean(a.horario) || horarios,
+      telefono: clean(a.telefono),
+      lat,
+      lng,
+      aproximada: a.precision_coordenadas === 'aproximada',
+      _dist: norm(a.distrito),
+      _prov: norm(a.provincia),
+    });
+  });
+  if (!out.length) throw new Error('El JSON no contiene agencias con latitud y longitud válidas dentro del Perú.');
+  return { agencias: out, invalid, meta: (json && json.meta) || null };
+}
+
+function applyAgencias(parsed, source) {
+  state.agencias = parsed.agencias;
+  const deps = new Set(parsed.agencias.map((a) => normDept(a.departamento)).filter(Boolean));
+  const fecha = parsed.meta && parsed.meta.fecha_extraccion ? ` · datos al ${esc(parsed.meta.fecha_extraccion)}` : '';
+  const aprox = parsed.agencias.filter((a) => a.aproximada).length;
+  const extra = [
+    parsed.invalid ? `${parsed.invalid} sin coordenadas válidas (omitidas)` : '',
+    aprox ? `${aprox} con ubicación aproximada` : '',
+  ].filter(Boolean).join(' · ');
+  setAgStatus('ok', `<b>${parsed.agencias.length} agencias</b> en ${deps.size} departamentos${fecha}<br><span class="hint" style="margin:0">Fuente: ${esc(source)}${extra ? ' · ' + esc(extra) : ''}</span>`);
+  // Si ya había resultados, se recalculan con la nueva base
+  state.results.forEach((r) => { if (r.status === 'done') r.status = 'pending'; });
+  if (state.rows.length) { renderTable(); renderStats(); updateProcessButton(); }
+}
+
+function setAgStatus(kind, html) {
+  const el = $('#agStatus');
+  el.className = `status-line ${kind}`;
+  $('.txt', el).innerHTML = html;
+}
+
+async function loadAgenciasFromUrl() {
+  setAgStatus('loading', 'Cargando <code>agencias_shalom.json</code>…');
+  try {
+    const resp = await fetch(CONFIG.AGENCIAS_URL, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    applyAgencias(parseAgencias(await resp.json()), CONFIG.AGENCIAS_URL);
+  } catch (err) {
+    const local = location.protocol === 'file:';
+    setAgStatus('error', local
+      ? 'No se pudo leer <code>agencias_shalom.json</code> porque abriste la página con doble clic (file://). Cárgalo con el botón de abajo, o publica la app en GitHub Pages / un servidor local.'
+      : `No se pudo cargar <code>agencias_shalom.json</code> (${esc(err.message)}). Verifica que el archivo esté junto a <code>index.html</code> o cárgalo con el botón de abajo.`);
+    updateProcessButton();
+  }
+}
+
+function nearestAgencies(lat, lng, n = 5, pool = state.agencias) {
+  return pool
+    .map((a) => ({ a, km: haversineKm(lat, lng, a.lat, a.lng) }))
+    .sort((x, y) => x.km - y.km)
+    .slice(0, n);
+}
+
+// Agencias del mismo distrito del cliente; con provinceFallback, las de su provincia si no hay en el distrito
+function localAgencies(f, provinceFallback = false) {
+  const place = placeOf(f);
+  const dists = place.distritos.map(norm).filter(Boolean);
+  const pool = state.agencias.filter((a) => sameDept(a.departamento, place.departamento));
+  const byDist = dists.length ? pool.filter((a) => dists.includes(a._dist)) : [];
+  if (byDist.length || !provinceFallback) return byDist;
+  const provs = [norm(place.provincia), ...dists].filter(Boolean);
+  return provs.length ? pool.filter((a) => provs.includes(a._prov)) : [];
+}
+
+/* ============================================================
+   LECTURA DEL ARCHIVO (SheetJS + PapaParse)
+   ============================================================ */
+function decodeText(buffer) {
+  const bytes = new Uint8Array(buffer);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^﻿/, '');
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes); // CSV guardado desde Excel en Windows
+  }
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  if (state.processing) { toast('Espera a que termine el proceso actual o detenlo.', 'error'); return; }
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  try {
+    if (typeof XLSX === 'undefined' || typeof Papa === 'undefined') throw new Error('No se pudieron cargar las librerías de lectura (SheetJS / PapaParse). Revisa tu conexión y recarga la página.');
+    const buffer = await file.arrayBuffer();
+    if (['xlsx', 'xls', 'xlsm', 'ods'].includes(ext)) {
+      const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+      const firstWithData = wb.SheetNames.find((n) => {
+        const ref = wb.Sheets[n]['!ref'];
+        return ref && XLSX.utils.decode_range(ref).e.r > 0;
+      }) || wb.SheetNames[0];
+      state.workbook = wb;
+      state.fileName = file.name;
+      loadSheet(firstWithData);
+    } else if (['csv', 'txt', 'tsv'].includes(ext)) {
+      const parsed = Papa.parse(decodeText(buffer), { skipEmptyLines: 'greedy', delimitersToGuess: [',', ';', '\t', '|'] });
+      if (!parsed.data.length) throw new Error('El CSV está vacío o no se pudo leer.');
+      state.workbook = null;
+      state.sheetName = '';
+      state.fileName = file.name;
+      setTable(parsed.data);
+    } else {
+      throw new Error('Formato no soportado. Usa un archivo .xlsx, .xls o .csv.');
+    }
+    toast(`Archivo cargado: ${state.rows.length} clientes.`, 'ok');
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'No se pudo leer el archivo.', 'error');
+  }
+}
+
+function loadSheet(name) {
+  state.sheetName = name;
+  const ws = state.workbook.Sheets[name];
+  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false, blankrows: false });
+  setTable(aoa);
+}
+
+const ALIAS_SET = new Set(FIELDS.flatMap((f) => f.aliases.map(norm)));
+
+function setTable(aoa) {
+  const rows = aoa.map((r) => (Array.isArray(r) ? r : []).map((v) => (v == null ? '' : String(v).trim())));
+  // Fila de encabezados: la que más coincide con los nombres esperados (entre las 10 primeras)
+  let headerIdx = -1;
+  let bestScore = 0;
+  for (let k = 0; k < Math.min(10, rows.length); k++) {
+    const score = rows[k].reduce((s, c) => s + (ALIAS_SET.has(norm(c)) ? 1 : 0), 0);
+    if (score > bestScore) { bestScore = score; headerIdx = k; }
+  }
+  if (headerIdx < 0) headerIdx = rows.findIndex((r) => r.some((c) => c !== ''));
+  if (headerIdx < 0) throw new Error('El archivo no contiene datos.');
+
+  let width = rows[headerIdx].length;
+  for (let k = headerIdx + 1; k < rows.length; k++) width = Math.max(width, rows[k].length);
+  const body = rows.slice(headerIdx + 1).filter((r) => r.some((c) => c !== ''));
+  // Se descartan las columnas sin encabezado y sin datos (Excel suele arrastrar columnas vacías)
+  const cols = [];
+  for (let c = 0; c < width; c++) {
+    if (clean(rows[headerIdx][c]) || body.some((r) => clean(r[c]))) cols.push(c);
+  }
+  const headers = [];
+  const seen = {};
+  for (const c of cols) {
+    let h = clean(rows[headerIdx][c]) || `Columna ${c + 1}`;
+    if (seen[h]) { seen[h] += 1; h = `${h} (${seen[h]})`; } else { seen[h] = 1; }
+    headers.push(h);
+  }
+  const data = body.map((r) => Object.fromEntries(headers.map((h, k) => [h, r[cols[k]] ?? ''])));
+  if (!data.length) throw new Error('No hay filas de clientes debajo de los encabezados.');
+
+  state.headers = headers;
+  state.rows = data;
+  state.mapping = autoMap(headers);
+  state.results = data.map(newResult);
+  state.filterCat = 'all';
+  state.filterText = '';
+  $('#filterText').value = '';
+  $('#progressWrap').hidden = true;
+  hideFatal();
+  renderFileInfo();
+  renderMapping();
+  renderTable();
+  renderStats();
+  updateProcessButton();
+  $('#cardMap').hidden = false;
+  $('#cardResults').hidden = false;
+}
+
+// Detección automática de columnas
+function autoMap(headers) {
+  const nh = headers.map(norm);
+  const used = new Set();
+  const map = {};
+  for (const f of FIELDS) {
+    const aliases = f.aliases.map(norm);
+    const idx = nh.findIndex((h, i) => !used.has(i) && aliases.includes(h));
+    if (idx >= 0) { map[f.key] = headers[idx]; used.add(idx); }
+  }
+  const excluded = {
+    direccion: /\b(correo|email|mail|ip)\b/,
+    whatsapp: /\b(pedido|orden|dni|documento|ruc)\b/,
+  };
+  const order = ['referencia', 'direccion', 'distrito', 'provincia', 'ciudad', 'departamento', 'whatsapp', 'nombre'];
+  for (const key of order) {
+    if (map[key]) continue;
+    const f = FIELDS.find((x) => x.key === key);
+    const aliases = f.aliases.map(norm).sort((a, b) => b.length - a.length);
+    let bestIdx = -1;
+    let bestLen = 0;
+    nh.forEach((h, i) => {
+      if (used.has(i)) return;
+      if (key !== 'referencia' && /\b(referencia|ref)\b/.test(h)) return;
+      if (excluded[key] && excluded[key].test(h)) return;
+      for (const al of aliases) {
+        if (al.length >= 3 && ` ${h} `.includes(` ${al} `) && al.length > bestLen) { bestIdx = i; bestLen = al.length; }
+      }
+    });
+    if (bestIdx >= 0) { map[key] = headers[bestIdx]; used.add(bestIdx); }
+  }
+  return map;
+}
+
+function rowFields(i) {
+  const row = state.rows[i];
+  const m = state.mapping;
+  const edits = state.results[i] && state.results[i].edits;
+  const get = (k) => {
+    if (edits && edits[k] != null) return clean(edits[k]);
+    return m[k] ? clean(row[m[k]]) : '';
+  };
+  return {
+    nombre: get('nombre'),
+    whatsapp: get('whatsapp'),
+    departamento: get('departamento'),
+    provincia: get('provincia'),
+    distrito: get('distrito'),
+    ciudad: get('ciudad'),
+    direccion: get('direccion'),
+    referencia: get('referencia'),
+  };
+}
+
+/* ============================================================
+   NORMALIZACIÓN DE DIRECCIONES
+   ============================================================ */
+// Une partes sin repetir ("Callao, Callao, Callao" → "Callao")
+function dedupeJoin(parts) {
+  const seen = new Set();
+  return parts.map(clean).filter((p) => {
+    const k = norm(p);
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).join(', ');
+}
+
+// Ubicación administrativa del cliente (Distrito tiene prioridad; "Ciudad y/o Distrito" es el formato antiguo)
+function placeOf(f) {
+  const distritos = expandCity(f.distrito || f.ciudad).split(',').map(clean).filter(Boolean);
+  return { departamento: clean(f.departamento), provincia: clean(f.provincia), distritos, distrito: distritos[0] || '' };
+}
+const placeText = (f) => dedupeJoin([f.distrito || f.ciudad, f.provincia, f.departamento]);
+
+// Formato: "[Dirección], [Distrito], [Provincia], [Departamento], Perú"
+function buildSearchAddress(f) {
+  if (!f.direccion && !placeText(f)) return '';
+  return dedupeJoin([f.direccion, f.distrito || f.ciudad, f.provincia, f.departamento, 'Perú']);
+}
+
+function expandCity(c) {
+  const n = norm(c);
+  if (!n) return '';
+  if (CITY_ALIASES[n]) return CITY_ALIASES[n];
+  return clean(String(c).replace(/^\s*cercado\s+(de\s+)?/i, ''))
+    .split(/\s*[\/|;,]\s*|\s+-\s+/)
+    .map((p) => CITY_ALIASES[norm(p)] || p)
+    .filter(Boolean)
+    .join(', ');
+}
+
+function expandAbbreviations(s) {
+  let t = ` ${s} `;
+  t = t.replace(/([a-záéíóúñ]{2,})\.(?=[a-záéíóúñ])/gi, '$1. ');   // "Av.Larco" → "Av. Larco"
+  t = t.replace(/([a-záéíóúñ]{3,})(\d{2,})/gi, '$1 $2');           // "Larco1045" → "Larco 1045"
+  t = t.replace(/\s{2,}/g, ' ');
+  for (const [re, rep] of ABBREVIATIONS) t = t.replace(re, rep);
+  return t;
+}
+
+// Código corto de manzana/lote/interior: "F", "B1", "12", "4A", "C-2"
+const CODE = String.raw`(?:\d[a-z0-9-]{0,4}|[a-z](?:-?\d{1,3})?)(?![a-záéíóúñ])`;
+
+function cleanAddress(dir, place) {
+  let t = ` ${dir} `;
+  t = t.replace(/\([^)]*\)/g, ' ');
+  t = t.replace(/\b(?:ref(?:erencia)?s?)\b[.:]?.*$/i, ' ');
+  t = t.replace(new RegExp(String.raw`\b(?:mz|mza|manzana)\.?\s*${CODE}`, 'gi'), ' ');
+  t = t.replace(new RegExp(String.raw`\b(?:lt|lte|lote)\.?\s*${CODE}`, 'gi'), ' ');
+  t = t.replace(new RegExp(String.raw`\b(?:dpto|depto|dep|departamento|int|interior|piso|of|oficina|stand|puesto|block|blq|bloque|torre|edif|edificio|pab|pabell[oó]n|sector|sub\s*lt)\.?\s*[#nº°]?\.?\s*${CODE}`, 'gi'), ' ');
+  t = t.replace(/\b\d+\s*(?:ra|da|ta|er|ro|do|to|va|na|ma|°|º)?\.?\s*etapa\b/gi, ' ');
+  t = t.replace(/\b(?:cdra|cuadra|cda)\.?\s*\d+/gi, ' ');
+  t = t.replace(/\bkm\.?\s*[\d.,]+/gi, ' ');
+  t = t.replace(/\bs\s*\/\s*n\b/gi, ' ');
+  t = t.replace(/\b(?:n[°ºo]\.?|nro\.?|num\.?|n[uú]mero)\s*(?=\d)/gi, ' ');
+  t = t.replace(/[#°º]\s*(?=\d)/g, ' ');
+  t = expandAbbreviations(t);
+  t = t.replace(/\s[-–—|]\s|\s*[–—|]\s*/g, ', ').replace(/\//g, ' ');
+  // Quita al final la ciudad/departamento repetidos (se agregan luego en orden)
+  const drop = new Set([...place.distritos.map(norm), norm(place.provincia), norm(place.departamento), 'peru'].filter(Boolean));
+  const parts = t.split(',').map(clean).filter((p) => p && /[a-z0-9]/i.test(norm(p)));
+  while (parts.length > 1 && drop.has(norm(parts[parts.length - 1]))) parts.pop();
+  return clean(parts.join(', ').replace(/^[\s,.;-]+|[\s,.;-]+$/g, ''));
+}
+
+// Extrae el nombre de la urbanización / AA.HH. / asociación de la dirección
+function extractZona(dir) {
+  const t = expandAbbreviations(String(dir || '').replace(/\([^)]*\)/g, ' '));
+  const m = t.match(/(?:Urbanización|Asentamiento Humano|Pueblo Joven|Asociación|Cooperativa|Residencial|Barrio|Conjunto Habitacional|Centro Poblado|Caser[ií]o|Habilitación Urbana)\s+([^,;()]+)/i);
+  if (!m) return '';
+  let name = m[1]
+    .replace(new RegExp(String.raw`\b(?:mz|mza|manzana|lt|lte|lote|int|dpto|piso)\.?\s*${CODE}`, 'gi'), ' ')
+    .replace(/\b\d+\s*(?:ra|da|ta|er|ro|do|to|°|º)?\.?\s*etapa\b/gi, ' ')
+    .replace(/^\s*de\s+vivienda\s+/i, '')
+    .replace(/\s-\s.*$/, '');
+  name = clean(name).replace(/[\s.,-]+$/, '');
+  return /[a-záéíóúñ]{3,}/i.test(name) ? name : '';
+}
+
+// Extrae un punto de referencia útil ("A dos cuadras del Mercado Modelo" → "Mercado Modelo")
+function extractLandmark(ref) {
+  const txt = clean(ref);
+  if (!txt) return '';
+  const chunks = txt.split(/[,;:()\/]|\s+y\s+(?=(?:a|al|frente|cerca|junto|espalda|detr[aá]s|entre)\b)|\s+o\s+(?=(?:a|al|frente|cerca)\b)/i);
+  for (const chunk of chunks) {
+    const tokens = clean(chunk).split(' ').filter(Boolean);
+    while (tokens.length && (LANDMARK_LEAD.has(norm(tokens[0])) || /^\d+[.,]?$/.test(tokens[0]) || !norm(tokens[0]))) tokens.shift();
+    while (tokens.length && (LANDMARK_TRAIL.has(norm(tokens[tokens.length - 1])) || !norm(tokens[tokens.length - 1]))) tokens.pop();
+    if (!tokens.length) continue;
+    const meaningful = tokens.map(norm).filter((w) => w && !LANDMARK_STOP.has(w) && !LANDMARK_GENERIC.has(w) && !/^\d+$/.test(w));
+    const landmark = clean(expandAbbreviations(tokens.join(' ')).replace(/[.]+\s*$/, ''));
+    if (meaningful.length && landmark.length >= 4) return landmark;
+  }
+  return '';
+}
+
+/* ============================================================
+   GEOCODIFICADORES
+   ============================================================ */
+const NOMI_ZONA = new Set(['suburb', 'neighbourhood', 'quarter', 'residential', 'city_block', 'hamlet', 'isolated_dwelling', 'allotments', 'farm', 'plot', 'croft', 'square']);
+const NOMI_DIST = new Set(['city', 'town', 'village', 'municipality', 'city_district', 'district', 'borough', 'county', 'state_district', 'subdistrict']);
+const NOMI_BROAD = new Set(['state', 'region', 'province', 'country', 'continent', 'postcode']);
+
+/* ---------- Similitud de textos: tolera errores de tipeo ("Ejersito" ≈ "Ejército") ---------- */
+const STREET_WORDS = new Set('avenida av ave calle jiron jr pasaje psje prolongacion prol carretera autopista urbanizacion urb asentamiento humano aahh pueblo joven asociacion asoc cooperativa residencial alameda malecon ovalo sector barrio conjunto habitacional centro poblado caserio habilitacion urbana via mz lt manzana lote etapa'.split(' '));
+const SIM_STOP = new Set('de del la el los las y e o en con al'.split(' '));
+
+function coreTokens(s) {
+  return norm(s).split(' ').filter((w) => w.length > 1 && !STREET_WORDS.has(w) && !SIM_STOP.has(w) && !/^\d+[a-z]?$/.test(w));
+}
+
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let diag = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const up = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diag + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diag = up;
+    }
+  }
+  return row[b.length];
+}
+
+function wordSim(a, b) {
+  if (a === b) return 1;
+  if (Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a))) return 0.9;
+  return 1 - levenshtein(a, b) / Math.max(a.length, b.length);
+}
+
+// De 0 a 1: cuánto se parece lo que escribió el cliente al nombre que figura en el mapa
+function textSim(query, candidate) {
+  const q = coreTokens(query);
+  const c = coreTokens(candidate);
+  if (!q.length || !c.length) return 0;
+  return q.reduce((sum, w) => sum + Math.max(...c.map((x) => wordSim(w, x))), 0) / q.length;
+}
+
+const digitsOf = (s) => { const m = String(s || '').match(/\d+/); return m ? m[0] : ''; };
+const lastNumber = (s) => { const m = String(s || '').match(/(\d{1,5})(?!.*\d)/); return m ? m[1] : ''; };
+const streetPart = (cleaned) => clean(String(cleaned || '').split(',')[0]);
+
+/* ---------- Áreas (rectángulos lat/lng) ---------- */
+function boxAround(lat, lng, km) {
+  const dLat = km / 111;
+  const dLng = km / (111 * Math.cos((lat * Math.PI) / 180));
+  return { s: lat - dLat, n: lat + dLat, w: lng - dLng, e: lng + dLng };
+}
+function growBox(b, km) {
+  const lat = (b.s + b.n) / 2;
+  const dLat = km / 111;
+  const dLng = km / (111 * Math.cos((lat * Math.PI) / 180));
+  return { s: b.s - dLat, n: b.n + dLat, w: b.w - dLng, e: b.e + dLng };
+}
+function unionBox(a, b) {
+  return { s: Math.min(a.s, b.s), n: Math.max(a.n, b.n), w: Math.min(a.w, b.w), e: Math.max(a.e, b.e) };
+}
+const inBox = (b, lat, lng) => lat >= b.s && lat <= b.n && lng >= b.w && lng <= b.e;
+const boxKey = (b) => (b ? [b.s, b.n, b.w, b.e].map((v) => v.toFixed(3)).join(',') : '');
+
+/* ---------- OpenStreetMap: Nominatim ---------- */
+function compactNominatim(x) {
+  const a = x.address || {};
+  const t = String(x.addresstype || x.type || '').toLowerCase();
+  let kind = 'poi';
+  if (a.house_number || t === 'building' || t === 'house') kind = 'exacta';
+  else if (t === 'road') kind = 'calle';
+  else if (NOMI_ZONA.has(t)) kind = 'zona';
+  else if (NOMI_DIST.has(t)) kind = 'distrito';
+  else if (NOMI_BROAD.has(t)) kind = 'amplio';
+  const bb = Array.isArray(x.boundingbox) ? x.boundingbox.map(Number) : null; // [sur, norte, oeste, este]
+  return {
+    source: 'nominatim',
+    lat: Number(x.lat),
+    lng: Number(x.lon),
+    kind,
+    region: a.state || a.region || '',
+    house: a.house_number || '',
+    names: {
+      street: [t === 'road' ? x.name : '', a.road, a.pedestrian, a.footway, a.path].filter(Boolean),
+      area: [a.residential, a.neighbourhood, a.suburb, a.quarter, a.hamlet, a.village, a.town, a.city, NOMI_ZONA.has(t) || NOMI_DIST.has(t) ? x.name : ''].filter(Boolean),
+      label: x.name || '',
+    },
+    box: bb && bb.length === 4 && bb.every(isFinite) ? { s: bb[0], n: bb[1], w: bb[2], e: bb[3] } : null,
+    display: String(x.display_name || '').slice(0, 140),
+  };
+}
+
+async function nominatimSearch(query, box) {
+  const params = new URLSearchParams({ format: 'jsonv2', addressdetails: '1', limit: '5', countrycodes: 'pe', 'accept-language': 'es' });
+  if (typeof query === 'string') params.set('q', query);
+  else Object.entries(query).forEach(([k, v]) => { if (v) params.set(k, v); });
+  if (box) {
+    params.set('viewbox', [box.w, box.n, box.e, box.s].map((v) => v.toFixed(5)).join(','));
+    params.set('bounded', '1');
+  }
+  const url = `${CONFIG.NOMINATIM_URL}?${params}`;
+  for (let attempt = 0; attempt <= CONFIG.MAX_RETRIES; attempt++) {
+    await throttle('nominatim', CONFIG.NOMINATIM_DELAY_MS);
+    let resp;
+    try {
+      resp = await fetch(url, { headers: { Accept: 'application/json' }, signal: state.abort ? state.abort.signal : undefined });
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      if (attempt < CONFIG.MAX_RETRIES) { await abortableSleep(2000 * (attempt + 1)); continue; }
+      throw new FatalError('No hay conexión con OpenStreetMap (Nominatim). Revisa tu internet e inténtalo de nuevo.');
+    }
+    if ([429, 502, 503, 504].includes(resp.status)) {
+      await abortableSleep(5000 * (attempt + 1));
+      continue;
+    }
+    if (resp.status === 403) throw new FatalError('Nominatim bloqueó temporalmente las consultas (HTTP 403). Espera unos minutos o usa Google Maps con tu API Key.');
+    if (!resp.ok) {
+      if (attempt < CONFIG.MAX_RETRIES) { await abortableSleep(2000); continue; }
+      throw new Error(`Nominatim respondió HTTP ${resp.status}`);
+    }
+    const json = await resp.json();
+    return Array.isArray(json) ? json.map(compactNominatim) : [];
+  }
+  throw new FatalError('Nominatim está limitando las consultas (HTTP 429). Espera unos minutos y pulsa "Continuar".');
+}
+
+/* ---------- OpenStreetMap: Photon (búsqueda tolerante a errores de tipeo) ---------- */
+function compactPhoton(feature) {
+  const p = feature.properties || {};
+  const coords = (feature.geometry && feature.geometry.coordinates) || [];
+  const t = String(p.type || '').toLowerCase();
+  let kind = 'amplio';
+  if (t === 'house') kind = p.housenumber ? 'exacta' : 'poi';
+  else if (t === 'street') kind = 'calle';
+  else if (t === 'locality' || t === 'district') kind = 'zona';
+  else if (t === 'city' || t === 'county') kind = 'distrito';
+  const ext = Array.isArray(p.extent) && p.extent.length === 4 ? p.extent.map(Number) : null; // [oeste, norte, este, sur]
+  return {
+    source: 'photon',
+    lat: Number(coords[1]),
+    lng: Number(coords[0]),
+    kind,
+    region: p.state || '',
+    country: p.countrycode || '',
+    house: p.housenumber || '',
+    names: {
+      street: [t === 'street' ? p.name : '', p.street].filter(Boolean),
+      area: [t === 'locality' || t === 'district' ? p.name : '', p.locality, p.district].filter(Boolean),
+      label: p.name || '',
+    },
+    box: ext && ext.every(isFinite) ? { s: ext[3], n: ext[1], w: ext[0], e: ext[2] } : null,
+    display: [p.name, p.street ? `${p.street} ${p.housenumber || ''}`.trim() : '', p.district || p.locality, p.city].filter(Boolean).join(', ').slice(0, 140),
+  };
+}
+
+// Devuelve null si el servicio falla (no se guarda en caché y no detiene el proceso)
+async function photonSearch(q, box) {
+  const params = new URLSearchParams({ q, limit: '6' });
+  if (box) params.set('bbox', [box.w, box.s, box.e, box.n].map((v) => v.toFixed(5)).join(','));
+  else { params.set('lat', '-9.19'); params.set('lon', '-75.02'); }
+  const url = `${CONFIG.PHOTON_URL}?${params}`;
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    await throttle('photon', CONFIG.PHOTON_DELAY_MS);
+    try {
+      const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal: state.abort ? state.abort.signal : undefined });
+      if (resp.ok) {
+        const json = await resp.json();
+        return (json.features || []).map(compactPhoton);
+      }
+      if (resp.status === 400) return [];
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+    }
+    await abortableSleep(2000 * (attempt + 1));
+  }
+  console.warn('Photon no respondió; se continúa sin búsqueda tolerante a errores para:', q);
+  return null;
+}
+
+/* ---------- Google Maps (opcional, con API Key) ---------- */
+const GoogleGeo = {
+  key: null,
+  geocoder: null,
+  authFailed: false,
+  authMessage: 'Google rechazó la API Key. Revisa que sea válida, que tenga habilitadas "Maps JavaScript API" y "Geocoding API", facturación activa y que tu dominio esté permitido.',
+  async ensure(key) {
+    if (this.geocoder) {
+      if (key !== this.key) throw new FatalError('Cambiaste la API Key de Google: recarga la página para usar la nueva.');
+      if (this.authFailed) throw new FatalError(this.authMessage);
+      return;
+    }
+    if (!key) throw new FatalError('Ingresa tu API Key de Google Maps o elige OpenStreetMap.');
+    if (!(window.google && window.google.maps && window.google.maps.importLibrary)) {
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new FatalError('Google Maps tardó demasiado en cargar. Revisa tu conexión.')), 20000);
+        window.__buscadorShalomGmReady = () => { clearTimeout(timer); resolve(); };
+        window.gm_authFailure = () => { GoogleGeo.authFailed = true; };
+        const s = document.createElement('script');
+        s.src = 'https://maps.googleapis.com/maps/api/js?' + new URLSearchParams({ key, v: 'weekly', loading: 'async', callback: '__buscadorShalomGmReady', language: 'es', region: 'PE' });
+        s.async = true;
+        s.onerror = () => { clearTimeout(timer); reject(new FatalError('No se pudo cargar Google Maps. Revisa tu conexión o la API Key.')); };
+        document.head.appendChild(s);
+      });
+    }
+    const { Geocoder } = await google.maps.importLibrary('geocoding');
+    this.geocoder = new Geocoder();
+    this.key = key;
+  },
+  // Con una API Key inválida Google nunca llama al callback: se vigila el error de autenticación y se aplica un tiempo límite
+  call(request) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let timer = null;
+      let watcher = null;
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        clearInterval(watcher);
+        fn(value);
+      };
+      timer = setTimeout(() => finish(resolve, { results: [], status: 'TIMEOUT' }), CONFIG.GOOGLE_TIMEOUT_MS);
+      watcher = setInterval(() => {
+        if (GoogleGeo.authFailed) finish(reject, new FatalError(GoogleGeo.authMessage));
+        else if (state.abort && state.abort.signal.aborted) finish(reject, abortError());
+      }, 200);
+      try {
+        const maybePromise = this.geocoder.geocode(request, (results, status) => finish(resolve, { results: results || [], status }));
+        if (maybePromise && typeof maybePromise.catch === 'function') {
+          maybePromise.catch((err) => {
+            const code = String((err && (err.code || err.message)) || '');
+            if (/REQUEST_DENIED/i.test(code)) finish(resolve, { results: [], status: 'REQUEST_DENIED' });
+          });
+        }
+      } catch (err) {
+        finish(reject, err);
+      }
+    });
+  },
+  compact(r) {
+    const types = r.types || [];
+    const lt = r.geometry && r.geometry.location_type;
+    const has = (list) => types.some((t) => list.includes(t));
+    let kind;
+    if (has(['street_address', 'premise', 'subpremise', 'plus_code']) || lt === 'ROOFTOP' || lt === 'RANGE_INTERPOLATED') kind = 'exacta';
+    else if (has(['route', 'intersection'])) kind = 'calle';
+    else if (has(['establishment', 'point_of_interest', 'park', 'transit_station', 'bus_station', 'train_station', 'airport', 'university', 'school', 'hospital', 'church', 'place_of_worship', 'shopping_mall', 'stadium', 'tourist_attraction', 'natural_feature'])) kind = 'poi';
+    else if (has(['neighborhood', 'sublocality', 'sublocality_level_1', 'sublocality_level_2', 'sublocality_level_3', 'sublocality_level_4', 'colloquial_area'])) kind = 'zona';
+    else if (has(['locality', 'administrative_area_level_2', 'administrative_area_level_3', 'administrative_area_level_4', 'postal_code'])) kind = 'distrito';
+    else kind = 'amplio';
+    if (kind === 'exacta' && r.partial_match) kind = 'calle';
+    const comps = r.address_components || [];
+    const comp = (type) => comps.filter((c) => (c.types || []).includes(type));
+    const admin1 = comp('administrative_area_level_1')[0];
+    const num = comp('street_number')[0];
+    const loc = r.geometry.location;
+    const g = r.geometry.bounds || r.geometry.viewport;
+    const bj = g ? (typeof g.toJSON === 'function' ? g.toJSON() : g) : null;
+    return {
+      source: 'google',
+      lat: typeof loc.lat === 'function' ? loc.lat() : loc.lat,
+      lng: typeof loc.lng === 'function' ? loc.lng() : loc.lng,
+      kind,
+      region: admin1 ? admin1.long_name : '',
+      house: num ? num.long_name : '',
+      names: {
+        street: comp('route').flatMap((c) => [c.long_name, c.short_name]),
+        area: ['neighborhood', 'sublocality', 'sublocality_level_1', 'locality', 'administrative_area_level_3'].flatMap((t) => comp(t).map((c) => c.long_name)),
+        label: String(r.formatted_address || '').split(',')[0],
+      },
+      box: bj && isFinite(bj.south) ? { s: bj.south, n: bj.north, w: bj.west, e: bj.east } : null,
+      display: String(r.formatted_address || '').slice(0, 140),
+    };
+  },
+  async search(q, box) {
+    const request = { address: q, componentRestrictions: { country: 'PE' }, region: 'pe' };
+    if (box) request.bounds = { north: box.n, south: box.s, east: box.e, west: box.w };
+    let lastStatus = '';
+    for (let attempt = 0; attempt <= CONFIG.MAX_RETRIES; attempt++) {
+      await throttle('google', CONFIG.GOOGLE_DELAY_MS);
+      if (this.authFailed) throw new FatalError(this.authMessage);
+      const { results, status } = await this.call(request);
+      if (state.abort && state.abort.signal.aborted) throw abortError();
+      if (status === 'OK') return results.map((r) => this.compact(r));
+      if (status === 'ZERO_RESULTS' || status === 'INVALID_REQUEST') return [];
+      if (status === 'REQUEST_DENIED') throw new FatalError(this.authMessage);
+      if (status === 'OVER_QUERY_LIMIT') { await abortableSleep(2000 * (attempt + 1)); continue; }
+      lastStatus = status;
+      await abortableSleep(1000 * (attempt + 1));
+    }
+    if (lastStatus === 'TIMEOUT') throw new FatalError('Google Maps no responde. Revisa tu conexión y la API Key, o usa OpenStreetMap.');
+    throw new Error('Google Maps no respondió después de varios intentos.');
+  },
+};
+
+const Geo = {
+  async search(provider, query, box) {
+    const qk = typeof query === 'string' ? query.toLowerCase() : JSON.stringify(query);
+    const key = `${provider}|${qk}|${boxKey(box)}`;
+    const cached = GeoCache.get(key);
+    if (cached !== undefined) return cached;
+    let results;
+    if (provider === 'google') {
+      const text = typeof query === 'string' ? query : dedupeJoin([query.city, query.county, query.state, 'Perú']);
+      results = await GoogleGeo.search(text, box);
+    } else if (provider === 'photon') {
+      results = await photonSearch(query, box);
+      if (results === null) return [];
+    } else {
+      results = await nominatimSearch(query, box);
+    }
+    GeoCache.set(key, results.slice(0, 6));
+    return results;
+  },
+};
+
+/* ---------- Búsqueda del distrito (el dato más confiable del pedido) ---------- */
+async function districtArea(place) {
+  const name = place.distrito || place.provincia;
+  if (!name) return null;
+  const dep = place.departamento;
+  const google = state.provider === 'google';
+  const tries = [];
+  if (!google) tries.push({ city: name, county: place.provincia, state: dep, country: 'Peru' });
+  tries.push(dedupeJoin([name, place.provincia, dep, 'Perú']));
+  if (place.provincia) tries.push(dedupeJoin([name, dep, 'Perú']));
+  for (const q of tries) {
+    const cands = await Geo.search(google ? 'google' : 'nominatim', q, null);
+    for (const c of cands) {
+      if (!isFinite(c.lat) || !isFinite(c.lng)) continue;
+      if (c.region && !sameDept(c.region, dep)) continue;
+      if (c.kind === 'amplio' || c.kind === 'exacta' || c.kind === 'calle') continue;
+      const names = [c.names.label, ...c.names.area].filter(Boolean);
+      if (names.length && Math.max(...names.map((n) => textSim(name, n))) < CONFIG.MIN_SIMILARITY) continue;
+      const base = c.box || boxAround(c.lat, c.lng, CONFIG.DISTRICT_MIN_HALF_KM);
+      const box = unionBox(growBox(base, CONFIG.DISTRICT_MARGIN_KM), boxAround(c.lat, c.lng, CONFIG.DISTRICT_MIN_HALF_KM));
+      return { lat: c.lat, lng: c.lng, box, name, display: c.display };
+    }
+  }
+  return null;
+}
+
+// Evalúa los resultados de un servicio: deben caer dentro del distrito y parecerse a lo escrito
+function pickCandidate(step, cands, ctx) {
+  const ok = [];
+  for (const c of cands) {
+    if (!isFinite(c.lat) || !isFinite(c.lng)) continue;
+    if (c.country && String(c.country).toUpperCase() !== 'PE') continue;
+    if (ctx.box) { if (!inBox(ctx.box, c.lat, c.lng)) continue; }
+    else if (c.region && !sameDept(c.region, ctx.dep)) continue;
+    const names = c.names || { street: [], area: [], label: '' };
+    let pool;
+    let precision;
+    if (step === 'calle') {
+      if (!['exacta', 'poi', 'calle'].includes(c.kind)) continue;
+      pool = names.street;
+      const sameNumber = ctx.number && c.house && digitsOf(c.house) === ctx.number;
+      precision = c.kind === 'exacta' && sameNumber ? 'exacta' : 'calle';
+    } else if (step === 'zona') {
+      if (!['exacta', 'poi', 'calle', 'zona'].includes(c.kind)) continue;
+      pool = [...names.area, ...names.street, c.kind === 'poi' || c.kind === 'zona' ? names.label : ''];
+      precision = 'zona';
+    } else {
+      if (c.kind === 'distrito' || c.kind === 'amplio') continue;
+      pool = [names.label, ...names.area, ...names.street];
+      precision = 'referencia';
+    }
+    pool = pool.filter(Boolean);
+    let sim = 0;
+    let matched = '';
+    pool.forEach((n) => { const s = textSim(ctx.target, n); if (s > sim) { sim = s; matched = n; } });
+    if (!coreTokens(ctx.target).length && c.source !== 'photon') { sim = CONFIG.MIN_SIMILARITY; matched = pool[0] || ''; }
+    if (c.source === 'google' && !pool.length) { sim = 1; matched = c.names.label; }
+    if (sim < CONFIG.MIN_SIMILARITY) continue;
+    ok.push({ lat: c.lat, lng: c.lng, precision, sim, matched, display: c.display, source: c.source });
+  }
+  if (!ok.length) return null;
+  if (ctx.near) {
+    ok.sort((a, b) => haversineKm(a.lat, a.lng, ctx.near.lat, ctx.near.lng) - haversineKm(b.lat, b.lng, ctx.near.lat, ctx.near.lng));
+  } else {
+    ok.sort((a, b) => (PREC[b.precision].rank - PREC[a.precision].rank) || (b.sim - a.sim));
+  }
+  return ok[0];
+}
+
+// Datos de calle y número de una agencia (se calculan una sola vez)
+function agencyStreetInfo(a) {
+  if (a._streetDone) return a;
+  a._streetDone = true;
+  const st = streetPart(cleanAddress(a.direccion, { distritos: [a.distrito], provincia: a.provincia, departamento: a.departamento }));
+  const n = Number(lastNumber(st));
+  a._street = coreTokens(st).length ? st : '';
+  a._num = n > 0 && n < 20000 ? n : null;
+  return a;
+}
+
+// En Perú la numeración avanza ~100 por cuadra. Con puntos de número conocido en la misma calle
+// (agencias Shalom y locales del mapa) se estima dónde queda el número del cliente.
+function estimateByNumber(street, N, osmRefs, box) {
+  if (!box || !N) return null;
+  const refs = [];
+  for (const a of state.agencias) {
+    if (!inBox(box, a.lat, a.lng)) continue;
+    agencyStreetInfo(a);
+    if (!a._num || !a._street || textSim(street, a._street) < CONFIG.STREET_NUMBER_SIM) continue;
+    refs.push({ n: a._num, lat: a.lat, lng: a.lng, agencyId: a.id, label: `la agencia ${a.nombre}` });
+  }
+  osmRefs.forEach((r) => { if (inBox(box, r.lat, r.lng)) refs.push(r); });
+  if (!refs.length) return null;
+  const lower = refs.filter((r) => r.n <= N).sort((a, b) => b.n - a.n)[0];
+  const upper = refs.filter((r) => r.n >= N).sort((a, b) => a.n - b.n)[0];
+  if (lower && upper && lower.n !== upper.n && upper.n - lower.n <= CONFIG.NUMBER_SPAN_MAX) {
+    const spanKm = haversineKm(lower.lat, lower.lng, upper.lat, upper.lng);
+    if (spanKm <= ((upper.n - lower.n) / 1000) * 2 + 0.5) {   // los dos puntos son coherentes con la numeración
+      const t = (N - lower.n) / (upper.n - lower.n);
+      return {
+        lat: lower.lat + (upper.lat - lower.lat) * t,
+        lng: lower.lng + (upper.lng - lower.lng) * t,
+        precision: 'numeracion', sim: 1, via: 'numeracion',
+        matched: `entre ${lower.label} (N° ${lower.n}) y ${upper.label} (N° ${upper.n})`,
+      };
+    }
+  }
+  const near = [lower, upper].filter(Boolean).sort((a, b) => Math.abs(a.n - N) - Math.abs(b.n - N))[0];
+  if (!near || Math.abs(near.n - N) > CONFIG.NUMBER_NEAR_MAX) return null;
+  return {
+    lat: near.lat, lng: near.lng, precision: 'numeracion', sim: 1, via: 'numeracion',
+    offsetKm: Math.abs(near.n - N) / 1000, refAgencyId: near.agencyId || null,
+    cuadras: Math.round(Math.abs(near.n - N) / 100),
+    matched: `${near.label} (N° ${near.n})`,
+  };
+}
+
+// Búsqueda en cascada para un cliente
+async function geocodeClient(f) {
+  const place = placeOf(f);
+  const dep = place.departamento;
+  const tail = dedupeJoin([place.distrito, place.provincia, dep, 'Perú']);
+  const main = state.provider === 'google' ? 'google' : 'nominatim';
+  const osm = main === 'nominatim';
+  const area = await districtArea(place);
+  const box = area ? area.box : null;
+  const cleaned = f.direccion ? cleanAddress(f.direccion, place) : '';
+  const street = streetPart(cleaned);
+  const number = lastNumber(street);
+  const tried = new Set();
+  const osmRefs = [];   // puntos del mapa con número conocido en la misma calle
+  let best = null;
+  const rankOf = (g) => (g ? PREC[g.precision].rank : 0);
+  const consider = (g) => { if (g && rankOf(g) > rankOf(best)) best = g; };
+
+  const search = async (step, provider, query, target, near) => {
+    if (!query || !target) return null;
+    const k = `${provider}|${query.toLowerCase()}`;
+    if (tried.has(k)) return null;
+    tried.add(k);
+    const cands = await Geo.search(provider, query, box);
+    if (step === 'calle') {
+      cands.forEach((c) => {
+        const n = Number(digitsOf(c.house));
+        if (n && isFinite(c.lat) && c.names && c.names.street.some((s) => textSim(street, s) >= CONFIG.STREET_NUMBER_SIM)) {
+          osmRefs.push({ n, lat: c.lat, lng: c.lng, label: `${c.names.label || c.names.street[0]}` });
+        }
+      });
+    }
+    const g = pickCandidate(step, cands, { target, number, dep, box, near });
+    if (g) { g.via = `${step}:${provider}`; g.query = query; }
+    return g;
+  };
+
+  // 1) Dirección tal como la escribió el cliente: "[Dirección], [Distrito], [Provincia], [Departamento], Perú"
+  if (f.direccion) consider(await search('calle', main, buildSearchAddress(f), street || f.direccion));
+
+  // 2) Dirección normalizada (abreviaturas y errores comunes corregidos, sin Mz/Lt/Int)
+  if (cleaned && rankOf(best) < PREC.exacta.rank) consider(await search('calle', main, `${cleaned}, ${tail}`, street));
+
+  // 3) Búsqueda tolerante a errores de tipeo (Photon), solo dentro del distrito
+  if (osm && street && rankOf(best) < PREC.exacta.rank) {
+    consider(await search('calle', 'photon', dedupeJoin([street, place.distrito]), street));
+  }
+
+  // 3b) Numeración: ubicar el número usando puntos conocidos de la misma calle
+  if (street && number && rankOf(best) < PREC.exacta.rank) consider(estimateByNumber(street, Number(number), osmRefs, box));
+
+  // 4) Urbanización / AA.HH. / asociación
+  if (f.direccion && rankOf(best) < PREC.zona.rank) {
+    const zona = extractZona(f.direccion);
+    if (zona) {
+      let g = await search('zona', main, `${zona}, ${tail}`, zona);
+      if (!g && osm) g = await search('zona', 'photon', dedupeJoin([zona, place.distrito]), zona);
+      consider(g);
+    }
+  }
+
+  // 5) Punto de referencia concreto ("Mercado Modelo"), solo dentro del distrito
+  if (rankOf(best) < PREC.referencia.rank && (box || best)) {
+    const landmark = extractLandmark(f.referencia);
+    if (landmark) {
+      let g = await search('referencia', main, `${landmark}, ${tail}`, landmark, best);
+      if (!g && osm) g = await search('referencia', 'photon', dedupeJoin([landmark, place.distrito]), landmark, best);
+      if (g) { g.matched = landmark; consider(g); }
+    }
+  }
+
+  // 6) Solo el distrito
+  if (!best && area) best = { lat: area.lat, lng: area.lng, precision: 'distrito', via: 'distrito', query: area.name, display: area.display, matched: area.name };
+  return best;
+}
+
+/* ============================================================
+   PROCESAMIENTO
+   ============================================================ */
+function assignAgency(r, f) {
+  r.agency = null;
+  r.km = null;
+  r.alternatives = [];
+  r.districtPriority = false;
+  if (!state.agencias.length) return;
+  let ranked = [];
+  if (r.geo) {
+    ranked = nearestAgencies(r.geo.lat, r.geo.lng, 6);
+    if (r.geo.precision === 'distrito') {
+      // Con solo el distrito, priorizamos agencias que están en ese distrito
+      const local = localAgencies(f);
+      if (local.length) {
+        const localRanked = nearestAgencies(r.geo.lat, r.geo.lng, 6, local);
+        if (localRanked[0].a !== ranked[0].a) r.districtPriority = true;
+        ranked = [...localRanked, ...ranked.filter((x) => !localRanked.some((y) => y.a === x.a))].slice(0, 6);
+      }
+    }
+  } else {
+    ranked = localAgencies(f, true).slice(0, 6).map((a) => ({ a, km: null }));
+  }
+  if (r.manualAgencyId) {
+    const chosen = state.agencias.find((a) => a.id === r.manualAgencyId);
+    if (chosen) {
+      const km = r.geo ? haversineKm(r.geo.lat, r.geo.lng, chosen.lat, chosen.lng) : null;
+      ranked = [{ a: chosen, km }, ...ranked.filter((x) => x.a !== chosen)];
+    }
+  }
+  if (r.geo && r.geo.refAgencyId && r.geo.offsetKm) {
+    ranked = ranked.map((x) => (x.a.id === r.geo.refAgencyId && x.km != null ? { a: x.a, km: Math.max(x.km, r.geo.offsetKm) } : x));
+    if (!r.manualAgencyId) ranked.sort((x, y) => x.km - y.km);
+  }
+  if (!ranked.length) return;
+  r.agency = ranked[0].a;
+  r.km = ranked[0].km;
+  r.alternatives = ranked.slice(1, 4);
+}
+
+function buildNote(r) {
+  const notes = [];
+  const g = r.geo;
+  if (!g) {
+    notes.push(r.agency
+      ? 'No se ubicó la dirección; se sugiere una agencia del distrito indicado.'
+      : 'No se pudo ubicar la dirección. Usa "Corregir" para editarla o pegar coordenadas.');
+  } else if (g.precision === 'manual') notes.push('Coordenadas ingresadas manualmente.');
+  else if (g.precision === 'exacta') notes.push(`Se encontró la dirección con número${g.matched ? ` en «${g.matched}»` : ''}.`);
+  else if (g.precision === 'numeracion') {
+    if (g.cuadras == null) notes.push(`Ubicado por la numeración de la calle, ${g.matched}.`);
+    else if (g.cuadras === 0) notes.push(`Ubicado por la numeración de la calle: en la misma cuadra que ${g.matched}.`);
+    else notes.push(`Ubicado por la numeración de la calle: a ~${g.cuadras} cuadra${g.cuadras === 1 ? '' : 's'} de ${g.matched}.`);
+  }
+  else if (g.precision === 'referencia') notes.push(`Ubicado por la referencia "${g.matched || ''}".`);
+  else if (g.precision === 'calle') notes.push(`Se ubicó la calle${g.matched ? ` «${g.matched}»` : ''}; el número no figura en el mapa.`);
+  else if (g.precision === 'zona') notes.push(`Se ubicó la urbanización o sector${g.matched ? ` (por «${g.matched}»)` : ''}; confirma la agencia con el cliente si hay otra cerca.`);
+  else if (g.precision === 'distrito') notes.push('La calle no figura en el mapa; se usó el centro del distrito. Confirma la agencia con el cliente.');
+  if (g && g.sim != null && g.sim < 0.97 && ['exacta', 'calle', 'zona'].includes(g.precision)) notes.push('Se corrigió un posible error de tipeo.');
+  if (r.districtPriority) notes.push('Se priorizó una agencia del mismo distrito.');
+  if (r.manualAgencyId) notes.push('Agencia elegida manualmente.');
+  if (r.agency && r.agency.aproximada) notes.push('La ubicación de esta agencia es aproximada.');
+  if (r.edits) notes.push('Datos corregidos manualmente.');
+  return notes.join(' ');
+}
+
+function category(r) {
+  if (r.status === 'pending') return 'pending';
+  if (r.status === 'processing') return 'processing';
+  if (r.status === 'error' || !r.agency) return 'bad';
+  if (!r.geo) return 'low';
+  return PREC[r.geo.precision].cat;
+}
+
+async function processRow(i) {
+  const r = state.results[i];
+  const f = rowFields(i);
+  r.searchText = buildSearchAddress(f);
+  r.note = '';
+  if (r.manualGeo) r.geo = r.manualGeo;
+  else if (!f.direccion && !placeOf(f).distrito) r.geo = null;
+  else r.geo = await geocodeClient(f);
+  assignAgency(r, f);
+  r.status = 'done';
+  r.note = !f.direccion && !placeOf(f).distrito && !r.manualGeo ? 'La fila no tiene dirección ni distrito.' : buildNote(r);
+}
+
+async function prepareProvider() {
+  if (state.provider === 'google') await GoogleGeo.ensure($('#gKey').value.trim());
+}
+
+async function processAll() {
+  if (state.processing) return;
+  if (!state.agencias.length) { toast('Primero carga la base de agencias (paso 1).', 'error'); return; }
+  if (!state.mapping.direccion) { toast('Asigna la columna "Dirección Completa".', 'error'); return; }
+  let queue = state.results.map((r, i) => i).filter((i) => state.results[i].status !== 'done');
+  if (!queue.length) {
+    state.results.forEach((r) => { r.status = 'pending'; });
+    queue = state.results.map((r, i) => i);
+    renderTable();
+  }
+  hideFatal();
+  state.processing = true;
+  state.abort = new AbortController();
+  setProcessingUi(true);
+  const t0 = Date.now();
+  let done = 0;
+  updateProgress(0, queue.length, '', t0);
+  try {
+    await prepareProvider();
+    for (const i of queue) {
+      if (state.abort.signal.aborted) break;
+      const r = state.results[i];
+      r.status = 'processing';
+      updateRow(i);
+      updateProgress(done, queue.length, rowFields(i).nombre || `Fila ${i + 1}`, t0);
+      try {
+        await processRow(i);
+      } catch (err) {
+        if (err.name === 'AbortError') { r.status = 'pending'; updateRow(i); break; }
+        if (err.fatal) { r.status = 'pending'; updateRow(i); throw err; }
+        console.error(err);
+        r.status = 'error';
+        r.geo = null;
+        r.agency = null;
+        r.km = null;
+        r.note = `Error: ${err.message}`;
+      }
+      done++;
+      updateRow(i);
+      renderStats();
+      updateProgress(done, queue.length, '', t0);
+      if (done % 5 === 0) GeoCache.save();
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') showFatal(err.message || String(err));
+  } finally {
+    GeoCache.save();
+    const stopped = state.abort.signal.aborted;
+    state.processing = false;
+    state.abort = null;
+    setProcessingUi(false);
+    renderTable();
+    renderStats();
+    updateProcessButton();
+    const pending = state.results.filter((r) => r.status !== 'done').length;
+    updateProgress(done, queue.length, '', t0, true);
+    if (stopped) toast(`Proceso detenido. ${pending} clientes pendientes.`);
+    else if (!pending) toast('¡Listo! Ya puedes descargar el Excel.', 'ok');
+  }
+}
+
+/* ============================================================
+   INTERFAZ
+   ============================================================ */
+function renderFileInfo() {
+  $('#fileInfo').hidden = false;
+  $('#fileName').textContent = state.fileName;
+  const fields = activeFields();
+  const mapped = fields.filter((f) => state.mapping[f.key]).length;
+  $('#fileMeta').textContent = `${state.rows.length} clientes · ${state.headers.length} columnas · ${mapped} de ${fields.length} campos detectados${state.sheetName ? ' · hoja "' + state.sheetName + '"' : ''}`;
+  const sel = $('#sheetSelect');
+  if (state.workbook && state.workbook.SheetNames.length > 1) {
+    sel.innerHTML = state.workbook.SheetNames.map((n) => `<option ${n === state.sheetName ? 'selected' : ''}>${esc(n)}</option>`).join('');
+    $('#sheetWrap').hidden = false;
+  } else {
+    $('#sheetWrap').hidden = true;
+  }
+}
+
+function renderMapping() {
+  const opts = (sel) => ['<option value="">(sin asignar)</option>', ...state.headers.map((h) => `<option value="${esc(h)}" ${h === sel ? 'selected' : ''}>${esc(h)}</option>`)].join('');
+  $('#mapGrid').innerHTML = activeFields().map((f) => `
+    <div>
+      <label class="label" for="map-${f.key}">${esc(f.label)}${f.required ? ' <span class="req">*</span>' : ''}</label>
+      <select id="map-${f.key}" data-field="${f.key}">${opts(state.mapping[f.key])}</select>
+    </div>`).join('');
+  renderMapWarn();
+}
+
+function renderMapWarn() {
+  const missing = activeFields().filter((f) => !state.mapping[f.key]).map((f) => f.label);
+  const m = state.mapping;
+  const el = $('#mapWarn');
+  if (!m.direccion) {
+    el.className = 'alert error';
+    el.textContent = 'Falta asignar la columna "Dirección": sin ella no se puede ubicar a los clientes.';
+    el.hidden = false;
+  } else if (missing.length) {
+    el.className = 'alert warn';
+    el.textContent = `Columnas sin asignar: ${missing.join(', ')}.${(!m.departamento || !(m.distrito || m.ciudad)) ? ' Sin Departamento y Distrito la búsqueda será menos precisa.' : ''}`;
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+  }
+}
+
+function updateProcessButton() {
+  const btn = $('#btnProcess');
+  const total = state.results.length;
+  if (!total) return;
+  const pending = state.results.filter((r) => r.status !== 'done').length;
+  btn.textContent = pending === total ? 'Buscar agencias más cercanas' : pending ? `Continuar (${pending} pendientes)` : 'Volver a procesar todo';
+  btn.disabled = state.processing || !state.agencias.length || !state.mapping.direccion;
+  if (state.processing) return;
+  const perRow = state.provider === 'google' ? 0.8 : 4;
+  let txt = pending ? `Tiempo estimado: ~${formatDuration(pending * perRow)} (menos si hay búsquedas en caché)` : '';
+  if (!state.agencias.length) txt = 'Carga la base de agencias para continuar.';
+  if (state.provider === 'nominatim' && total > 500) txt += ' · Para archivos grandes conviene Google Maps.';
+  $('#estimate').textContent = txt;
+}
+
+function setProcessingUi(on) {
+  $('#btnProcess').disabled = on;
+  $('#btnStop').hidden = !on;
+  $('#progressWrap').hidden = false;
+  $('#progressWrap').classList.toggle('running', on);
+  document.querySelectorAll('#mapGrid select, #sheetSelect, input[name=provider], #gKey, #fileInput, #agFile, #btnRemoveFile').forEach((el) => { el.disabled = on; });
+  document.querySelectorAll('[data-edit]').forEach((b) => { b.disabled = on; });
+  if (on) $('#estimate').textContent = '';
+}
+
+function updateProgress(done, total, currentName, t0, finished = false) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  $('#progressFill').style.width = `${pct}%`;
+  $('#progressBar').setAttribute('aria-valuenow', String(pct));
+  if (finished) {
+    $('#progressText').innerHTML = `<strong>${done} de ${total}</strong> clientes procesados`;
+    $('#progressRight').textContent = `${pct}% · ${formatDuration((Date.now() - t0) / 1000) || '0 s'}`;
+    return;
+  }
+  const elapsed = (Date.now() - t0) / 1000;
+  const eta = done ? (elapsed / done) * (total - done) : NaN;
+  $('#progressText').innerHTML = `<strong>Procesando ${Math.min(done + 1, total)} de ${total}</strong>${currentName ? ' · ' + esc(currentName) : ''}`;
+  $('#progressRight').textContent = `${pct}%${done && total > done ? ' · quedan ~' + formatDuration(eta) : ''}`;
+}
+
+function showFatal(msg) { const el = $('#fatal'); el.textContent = msg; el.hidden = false; }
+function hideFatal() { $('#fatal').hidden = true; }
+
+function badgeHtml(r) {
+  const cat = category(r);
+  if (cat === 'processing') return '<span class="badge processing"><span class="spinner" aria-hidden="true"></span>Buscando…</span>';
+  if (cat === 'pending') return '<span class="badge">Pendiente</span>';
+  const label = r.geo ? PREC[r.geo.precision].label : (r.agency ? 'Por distrito' : (r.status === 'error' ? 'Error' : 'No ubicada'));
+  return `<span class="badge ${cat}">${esc(label)}</span>`;
+}
+
+function rowHtml(i) {
+  const r = state.results[i];
+  const f = rowFields(i);
+  const a = r.agency;
+  const wa = waLink(f.whatsapp);
+  const place = placeText(f);
+  const agPlace = a ? [a.distrito, a.provincia, a.departamento].filter(Boolean).join(', ') : '';
+  const agCell = a
+    ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}`
+    : (r.status === 'done' || r.status === 'error' ? '<span class="sub">Sin agencia sugerida</span>' : '<span class="sub">—</span>');
+  const links = a
+    ? `<div class="maplinks"><a href="${esc(mapsAgencyUrl(a))}" target="_blank" rel="noopener" title="Abrir la ficha de la agencia en Google Maps">Ver agencia</a>${r.geo ? `<a href="${routeUrl(r.geo, a)}" target="_blank" rel="noopener" title="Cómo llegar desde la ubicación del cliente hasta la agencia">Ver ruta</a>` : ''}</div>`
+    : '—';
+  return `
+    <td class="c-idx" data-label="#">${i + 1}</td>
+    <td class="col-client" data-label="Cliente"><strong>${esc(f.nombre || '(sin nombre)')}</strong></td>
+    <td class="col-wa" data-label="WhatsApp">${wa ? `<a href="${wa}" target="_blank" rel="noopener">${esc(f.whatsapp)}</a>` : esc(f.whatsapp || '—')}</td>
+    <td class="col-addr" data-label="Dirección" title="Búsqueda: ${esc(r.searchText || buildSearchAddress(f))}">
+      <div>${esc(f.direccion || '—')}</div>
+      ${place ? `<div class="sub">${esc(place)}</div>` : ''}
+      ${f.referencia ? `<div class="sub">Ref: ${esc(f.referencia)}</div>` : ''}
+    </td>
+    <td class="col-agency" data-label="Agencia Shalom Sugerida">${agCell}</td>
+    <td class="col-agaddr" data-label="Dirección Agencia">${a ? `<div>${esc(a.direccion)}</div>${a.referencia ? `<div class="sub">${esc(a.referencia)}</div>` : ''}` : '—'}</td>
+    <td class="num" data-label="Distancia (km)">${r.km != null ? `<span class="km">${fmtKm(r.km)}</span>` : '—'}</td>
+    <td class="col-prec" data-label="Precisión">${badgeHtml(r)}${r.note ? `<div class="sub">${esc(r.note)}</div>` : ''}<div class="prec-action"><button type="button" class="btn btn-ghost btn-sm" data-edit="${i}" ${state.processing ? 'disabled' : ''}>Corregir</button></div></td>
+    <td data-label="Google Maps">${links}</td>`;
+}
+
+function rowMatchesFilter(i) {
+  const r = state.results[i];
+  if (state.filterCat !== 'all') {
+    const cat = category(r);
+    if ((cat === 'processing' ? 'pending' : cat) !== state.filterCat) return false;
+  }
+  if (state.filterText) {
+    const f = rowFields(i);
+    const hay = norm([f.nombre, f.whatsapp, f.direccion, f.distrito, f.provincia, f.ciudad, f.departamento, f.referencia, r.agency ? `${r.agency.nombre} ${r.agency.distrito} ${r.agency.provincia}` : ''].join(' '));
+    if (!state.filterText.split(' ').every((w) => hay.includes(w))) return false;
+  }
+  return true;
+}
+
+function renderTable() {
+  const tbody = $('#tbody');
+  tbody.innerHTML = state.rows.map((_, i) => `<tr data-i="${i}" class="cat-${category(state.results[i])}"${rowMatchesFilter(i) ? '' : ' hidden'}>${rowHtml(i)}</tr>`).join('');
+  updateFilterCount();
+}
+
+function updateRow(i) {
+  const tr = document.querySelector(`#tbody tr[data-i="${i}"]`);
+  if (!tr) return;
+  tr.className = `cat-${category(state.results[i])}`;
+  tr.innerHTML = rowHtml(i);
+  tr.hidden = !rowMatchesFilter(i);
+  if (state.processing && state.results[i].status === 'processing' && !tr.hidden) {
+    const rect = tr.getBoundingClientRect();
+    const wrap = $('#cardResults').getBoundingClientRect();
+    const resultsVisible = wrap.top < window.innerHeight && wrap.bottom > 0;
+    if (resultsVisible && (rect.top < 0 || rect.bottom > window.innerHeight)) tr.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  updateFilterCount();
+}
+
+function updateFilterCount() {
+  const total = state.rows.length;
+  const visible = document.querySelectorAll('#tbody tr[data-i]:not([hidden])').length;
+  $('#filterCount').textContent = visible === total ? `${total} filas` : `${visible} de ${total} filas`;
+  const empty = $('#tbody .empty-row');
+  if (!visible && total) {
+    if (!empty) $('#tbody').insertAdjacentHTML('beforeend', '<tr class="empty-row"><td colspan="9" class="empty">No hay filas con este filtro.</td></tr>');
+  } else if (empty) {
+    empty.remove();
+  }
+}
+
+function renderStats() {
+  const counts = { all: state.results.length, ok: 0, mid: 0, low: 0, bad: 0, pending: 0 };
+  state.results.forEach((r) => {
+    const c = category(r);
+    counts[c === 'processing' ? 'pending' : c] += 1;
+  });
+  if (state.filterCat === 'pending' && !counts.pending) state.filterCat = 'all';
+  const tiles = ['all', 'ok', 'mid', 'low', 'bad'];
+  if (counts.pending) tiles.push('pending');
+  $('#stats').innerHTML = tiles.map((k) => `
+    <button type="button" class="stat ${k}" data-cat="${k}" aria-pressed="${state.filterCat === k}">
+      <span class="n">${counts[k]}</span><span class="l">${k !== 'all' ? '<i></i>' : ''}${esc(CATS[k].label)}</span>
+    </button>`).join('');
+}
+
+function updateProviderUi() {
+  $('#googleBox').hidden = state.provider !== 'google';
+  $('#providerHint').textContent = state.provider === 'google'
+    ? 'Google Maps suele ubicar mejor las direcciones con número. Las consultas se cobran según tu cuenta de Google Cloud, que incluye un crédito mensual gratuito.'
+    : 'OpenStreetMap es gratuito. La dirección se busca solo dentro del distrito del pedido y se corrigen errores de tipeo comparando con los nombres de calles del mapa. Se espera 1 segundo entre consultas, así que cada cliente toma de 2 a 8 segundos. Los resultados se guardan en caché en este navegador.';
+  updateProcessButton();
+}
+
+/* ============================================================
+   CORRECCIÓN MANUAL
+   ============================================================ */
+function parseCoords(s) {
+  const t = String(s || '').trim();
+  if (!t) return null;
+  const patterns = [
+    /!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/,
+    /[?&](?:q|query|ll|destination|center|daddr)=(-?\d{1,2}\.\d+)\s*(?:,|%2C)\s*(-?\d{1,3}\.\d+)/i,
+    /@(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/,
+    /(-?\d{1,2}\.\d+)\s*[,;\s]\s*(-?\d{1,3}\.\d+)/,
+  ];
+  for (const re of patterns) {
+    const m = t.match(re);
+    if (m) {
+      const lat = Number(m[1]);
+      const lng = Number(m[2]);
+      if (lat > -19 && lat < 1 && lng > -82 && lng < -68) return { lat, lng };
+    }
+  }
+  return null;
+}
+
+function openEditor(i) {
+  state.editIndex = i;
+  const f = rowFields(i);
+  $('#dlgClient').textContent = [f.nombre || `Fila ${i + 1}`, f.whatsapp].filter(Boolean).join(' · ');
+  $('#eDir').value = f.direccion;
+  $('#eDist').value = f.distrito || f.ciudad;
+  $('#eProv').value = f.provincia;
+  $('#eDep').value = f.departamento;
+  $('#eRef').value = f.referencia;
+  $('#eCoords').value = '';
+  editorMsg('');
+  renderEditorAgencies();
+  const dlg = $('#dlg');
+  if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+}
+
+function closeEditor() {
+  const dlg = $('#dlg');
+  if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
+  state.editIndex = -1;
+}
+
+function editorMsg(text, kind = 'info') {
+  const el = $('#eMsg');
+  el.className = `alert ${kind}`;
+  el.textContent = text;
+  el.hidden = !text;
+}
+
+function renderEditorAgencies() {
+  const i = state.editIndex;
+  if (i < 0) return;
+  const r = state.results[i];
+  const f = rowFields(i);
+  let list = r.geo ? nearestAgencies(r.geo.lat, r.geo.lng, 6) : localAgencies(f, true).slice(0, 6).map((a) => ({ a, km: null }));
+  if (r.agency && !list.some((x) => x.a === r.agency)) list = [{ a: r.agency, km: r.km }, ...list];
+  $('#eAgBox').hidden = !list.length;
+  $('#eAgencies').innerHTML = list.map(({ a, km }) => `
+    <label class="choice ${r.agency === a ? 'sel' : ''}">
+      <input type="radio" name="eAgency" value="${esc(a.id)}" ${r.agency === a ? 'checked' : ''}>
+      <span class="grow"><span class="ag-name">${esc(a.nombre)}</span><span class="sub" style="display:block">${esc(a.direccion)} · ${esc([a.distrito, a.departamento].filter(Boolean).join(', '))}</span></span>
+      <span class="km">${km != null ? fmtKm(km) : ''}</span>
+    </label>`).join('');
+}
+
+async function editorSearch() {
+  const i = state.editIndex;
+  if (i < 0 || state.processing) return;
+  const r = state.results[i];
+  const distrito = $('#eDist').value;
+  r.edits = {
+    direccion: $('#eDir').value,
+    departamento: $('#eDep').value,
+    provincia: $('#eProv').value,
+    distrito,
+    ciudad: state.mapping.distrito ? undefined : distrito,
+    referencia: $('#eRef').value,
+  };
+  r.manualGeo = null;
+  r.manualAgencyId = null;
+  const btn = $('#eSearch');
+  btn.disabled = true;
+  btn.textContent = 'Buscando…';
+  editorMsg('');
+  state.abort = new AbortController();
+  try {
+    await prepareProvider();
+    r.status = 'processing';
+    updateRow(i);
+    await processRow(i);
+    GeoCache.save();
+    if (r.geo) editorMsg(`Ubicado (${PREC[r.geo.precision].label}).${r.agency ? ` Agencia sugerida: ${r.agency.nombre}, a ${fmtKm(r.km)}.` : ''}`, 'ok');
+    else editorMsg('No se pudo ubicar. Prueba con otra dirección o pega coordenadas.', 'warn');
+  } catch (err) {
+    r.status = 'error';
+    r.geo = null;
+    r.agency = null;
+    r.km = null;
+    r.note = err.message;
+    editorMsg(err.message, 'error');
+  } finally {
+    state.abort = null;
+    btn.disabled = false;
+    btn.textContent = 'Buscar de nuevo';
+    updateRow(i);
+    renderStats();
+    updateProcessButton();
+    if (state.editIndex === i) renderEditorAgencies();
+  }
+}
+
+async function editorUseCoords() {
+  const i = state.editIndex;
+  if (i < 0) return;
+  const raw = $('#eCoords').value;
+  if (/goo\.gl|maps\.app/i.test(raw)) { editorMsg('Los enlaces cortos de Google Maps no incluyen coordenadas. Ábrelo, haz clic derecho sobre el punto y copia las coordenadas.', 'warn'); return; }
+  const c = parseCoords(raw);
+  if (!c) { editorMsg('No se reconocieron coordenadas válidas del Perú. Ejemplo: -8.11167, -79.02869', 'warn'); return; }
+  const r = state.results[i];
+  r.manualGeo = { lat: c.lat, lng: c.lng, precision: 'manual', via: 'manual', query: raw, display: '' };
+  r.manualAgencyId = null;
+  await processRow(i);
+  updateRow(i);
+  renderStats();
+  updateProcessButton();
+  renderEditorAgencies();
+  editorMsg(r.agency ? `Listo: ${r.agency.nombre}, a ${fmtKm(r.km)}.` : 'Coordenadas guardadas.', 'ok');
+}
+
+function editorPickAgency(id) {
+  const i = state.editIndex;
+  if (i < 0) return;
+  const r = state.results[i];
+  r.manualAgencyId = id;
+  assignAgency(r, rowFields(i));
+  r.status = 'done';
+  r.note = buildNote(r);
+  updateRow(i);
+  renderStats();
+  updateProcessButton();
+  renderEditorAgencies();
+}
+
+/* ============================================================
+   EXPORTACIÓN A EXCEL
+   ============================================================ */
+function exportExcel() {
+  if (!state.rows.length) return;
+  const newCols = Object.values(OUT_COLS);
+  const origHeaders = state.headers.filter((h) => !newCols.includes(h)); // evita duplicar si se sube un archivo ya procesado
+  const fieldByHeader = {};
+  Object.entries(state.mapping).forEach(([k, h]) => { if (h) fieldByHeader[h] = k; });
+  const header = [...origHeaders, ...newCols];
+  const aoa = [header];
+  state.rows.forEach((row, i) => {
+    const r = state.results[i];
+    const f = rowFields(i);
+    const a = r.agency;
+    const g = r.geo;
+    const cat = category(r);
+    const orig = origHeaders.map((h) => {
+      const k = fieldByHeader[h];
+      if (k && r.edits && r.edits[k] != null) return r.edits[k];
+      return row[h] ?? '';
+    });
+    const values = {
+      busqueda: r.searchText || buildSearchAddress(f),
+      estado: r.status === 'error' ? 'Error' : ESTADO_EXPORT[cat],
+      precision: g ? PREC[g.precision].label : (r.status === 'done' ? (a ? 'Por distrito' : 'No ubicada') : ''),
+      lat: g ? round(g.lat, 6) : '',
+      lng: g ? round(g.lng, 6) : '',
+      agencia: a ? a.nombre : '',
+      agDir: a ? a.direccion : '',
+      agRef: a ? a.referencia : '',
+      agDist: a ? a.distrito : '',
+      agProv: a ? a.provincia : '',
+      agDep: a ? a.departamento : '',
+      agHorario: a ? a.horario : '',
+      km: r.km != null ? round(r.km, 2) : '',
+      linkAg: a ? mapsAgencyUrl(a) : '',
+      linkRuta: a && g ? routeUrl(g, a) : '',
+      otras: r.alternatives.map((x) => `${x.a.nombre}${x.km != null ? ` (${x.km.toFixed(2)} km)` : ''}`).join('; '),
+      obs: r.note || '',
+    };
+    aoa.push([...orig, ...Object.keys(OUT_COLS).map((k) => values[k])]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const col = (name) => header.indexOf(name);
+  const linkCols = [col(OUT_COLS.linkAg), col(OUT_COLS.linkRuta)];
+  const kmCol = col(OUT_COLS.km);
+  for (let R = 1; R < aoa.length; R++) {
+    linkCols.forEach((C) => {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+      if (cell && cell.v) cell.l = { Target: String(cell.v), Tooltip: C === linkCols[0] ? 'Abrir la ficha de la agencia en Google Maps' : 'Ver la ruta del cliente a la agencia' };
+    });
+    const kc = ws[XLSX.utils.encode_cell({ r: R, c: kmCol })];
+    if (kc && typeof kc.v === 'number') kc.z = '0.00';
+  }
+  ws['!cols'] = header.map((h, c) => {
+    let w = String(h).length;
+    for (let R = 1; R < Math.min(aoa.length, 300); R++) w = Math.max(w, String(aoa[R][c] ?? '').length);
+    return { wch: Math.min(60, Math.max(10, w + 2)) };
+  });
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: header.length - 1 } }) };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Clientes con agencia');
+  const base = (state.fileName || 'clientes').replace(/\.[^.]+$/, '');
+  XLSX.writeFile(wb, `${base}_agencias_shalom.xlsx`, { compression: true });
+  const pending = state.results.filter((r) => r.status !== 'done').length;
+  toast(pending ? `Excel descargado (${pending} filas aún pendientes).` : 'Excel descargado.', 'ok');
+}
+
+function downloadTemplate(ev) {
+  ev.preventDefault();
+  if (typeof XLSX === 'undefined') { toast('No se pudo cargar SheetJS. Revisa tu conexión.', 'error'); return; }
+  const labels = FIELDS.filter((f) => !f.legacy).map((f) => (f.key === 'whatsapp' ? 'Número de teléfono' : f.key === 'nombre' ? 'Nombre y apellidos' : f.label));
+  const ws = XLSX.utils.aoa_to_sheet([labels]);
+  ws['!cols'] = labels.map((l) => ({ wch: Math.max(18, l.length + 4) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+  XLSX.writeFile(wb, 'plantilla_clientes_shalom.xlsx');
+}
+
+/* ============================================================
+   EVENTOS
+   ============================================================ */
+function saveSettings() {
+  store.set(CONFIG.SETTINGS_KEY, { provider: state.provider });
+  if ($('#gKeyRemember').checked && $('#gKey').value.trim()) store.set(CONFIG.GOOGLE_KEY_STORAGE, $('#gKey').value.trim());
+  else store.del(CONFIG.GOOGLE_KEY_STORAGE);
+}
+
+function resetAll() {
+  if (state.processing) return;
+  state.fileName = '';
+  state.workbook = null;
+  state.sheetName = '';
+  state.headers = [];
+  state.rows = [];
+  state.results = [];
+  state.mapping = {};
+  $('#fileInfo').hidden = true;
+  $('#cardMap').hidden = true;
+  $('#cardResults').hidden = true;
+  $('#progressWrap').hidden = true;
+  $('#tbody').innerHTML = '';
+  $('#fileInput').value = '';
+  hideFatal();
+}
+
+function bindEvents() {
+  const dz = $('#dropzone');
+  const input = $('#fileInput');
+  dz.addEventListener('click', () => { if (!state.processing) input.click(); });
+  dz.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!state.processing) input.click(); }
+  });
+  ['dragenter', 'dragover'].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave', 'dragend', 'drop'].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', (e) => { const file = e.dataTransfer && e.dataTransfer.files[0]; if (file) handleFile(file); });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => e.preventDefault());
+  input.addEventListener('change', () => { const file = input.files[0]; input.value = ''; handleFile(file); });
+
+  $('#sheetSelect').addEventListener('change', (e) => {
+    try { loadSheet(e.target.value); } catch (err) { toast(err.message, 'error'); }
+  });
+  $('#btnRemoveFile').addEventListener('click', resetAll);
+  $('#dlTemplate').addEventListener('click', downloadTemplate);
+
+  $('#agFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      applyAgencias(parseAgencias(JSON.parse(decodeText(await file.arrayBuffer()))), file.name);
+      toast('Base de agencias cargada.', 'ok');
+    } catch (err) {
+      toast(`JSON inválido: ${err.message}`, 'error');
+    }
+  });
+
+  document.querySelectorAll('input[name=provider]').forEach((radio) => radio.addEventListener('change', () => {
+    state.provider = document.querySelector('input[name=provider]:checked').value;
+    saveSettings();
+    updateProviderUi();
+  }));
+  $('#gKeyToggle').addEventListener('click', () => {
+    const k = $('#gKey');
+    k.type = k.type === 'password' ? 'text' : 'password';
+    $('#gKeyToggle').textContent = k.type === 'password' ? 'Mostrar' : 'Ocultar';
+  });
+  $('#gKey').addEventListener('change', saveSettings);
+  $('#gKeyRemember').addEventListener('change', saveSettings);
+  $('#btnClearCache').addEventListener('click', () => {
+    const n = GeoCache.size();
+    GeoCache.clear();
+    toast(`Caché borrada (${n} búsquedas).`);
+  });
+
+  $('#mapGrid').addEventListener('change', (e) => {
+    const sel = e.target.closest('select[data-field]');
+    if (!sel) return;
+    if (sel.value) state.mapping[sel.dataset.field] = sel.value;
+    else delete state.mapping[sel.dataset.field];
+    state.results = state.rows.map(newResult);
+    renderFileInfo();
+    renderMapWarn();
+    renderTable();
+    renderStats();
+    updateProcessButton();
+  });
+
+  $('#btnProcess').addEventListener('click', processAll);
+  $('#btnStop').addEventListener('click', () => { if (state.abort) state.abort.abort(); });
+  $('#btnExport').addEventListener('click', () => {
+    try { exportExcel(); } catch (err) { console.error(err); toast(`No se pudo generar el Excel: ${err.message}`, 'error'); }
+  });
+
+  $('#stats').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cat]');
+    if (!b) return;
+    state.filterCat = state.filterCat === b.dataset.cat ? 'all' : b.dataset.cat;
+    renderStats();
+    renderTable();
+  });
+  let filterTimer;
+  $('#filterText').addEventListener('input', (e) => {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(() => { state.filterText = norm(e.target.value); renderTable(); }, 150);
+  });
+
+  $('#tbody').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-edit]');
+    if (b && !state.processing) openEditor(Number(b.dataset.edit));
+  });
+  $('#dlgClose').addEventListener('click', closeEditor);
+  $('#dlg').addEventListener('click', (e) => { if (e.target === $('#dlg')) closeEditor(); });
+  $('#dlg').addEventListener('close', () => { state.editIndex = -1; });
+  $('#eSearch').addEventListener('click', editorSearch);
+  $('#eUseCoords').addEventListener('click', editorUseCoords);
+  $('#eCoords').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); editorUseCoords(); } });
+  $('#eAgencies').addEventListener('change', (e) => { if (e.target.name === 'eAgency') editorPickAgency(e.target.value); });
+
+  window.addEventListener('beforeunload', (e) => {
+    if (state.processing) { e.preventDefault(); e.returnValue = ''; }
+  });
+}
+
+function init() {
+  $('#deptList').innerHTML = DEPARTAMENTOS.map((d) => `<option value="${esc(d)}">`).join('');
+  GeoCache.load();
+  const settings = store.get(CONFIG.SETTINGS_KEY, {}) || {};
+  if (settings.provider === 'google' || settings.provider === 'nominatim') state.provider = settings.provider;
+  document.querySelector(`input[name=provider][value=${state.provider}]`).checked = true;
+  const savedKey = store.get(CONFIG.GOOGLE_KEY_STORAGE, '');
+  if (savedKey) { $('#gKey').value = savedKey; $('#gKeyRemember').checked = true; }
+  bindEvents();
+  updateProviderUi();
+  loadAgenciasFromUrl();
+  if (typeof XLSX === 'undefined' || typeof Papa === 'undefined') {
+    toast('No se pudieron cargar las librerías para leer Excel/CSV. Revisa tu conexión y recarga.', 'error');
+  }
+}
+
+// Acceso para pruebas desde la consola del navegador
+window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber };
+
+init();
+})();
+</script>
+</body>
+</html>

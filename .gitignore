@@ -1,0 +1,7 @@
+# Datos reales de clientes: nunca se publican
+Pedidos Shopify.xlsx
+*_agencias_shalom.xlsx
+# Archivos temporales de Excel y del sistema
+~$*
+.DS_Store
+Thumbs.db
