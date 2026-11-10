@@ -416,7 +416,7 @@ footer.site p { margin: 4px 0; }
             <th>Dirección Agencia</th>
             <th class="num">Distancia (km)</th>
             <th>Precisión</th>
-            <th>Link Google Maps</th>
+            <th>Ver agencia</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -701,6 +701,36 @@ function mapsAgencyUrl(a) {
   const query = [nombre, a.distrito, a.departamento].filter(Boolean).join(', ');
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
+// El buscador de shalom.com.pe/agencias filtra por departamento, provincia o distrito (no por nombre de agencia)
+// y no acepta parámetros en el enlace: se copia el distrito para pegarlo ahí.
+const SHALOM_AGENCIAS_URL = 'https://shalom.com.pe/agencias';
+
+// Copia de forma síncrona, dentro del clic, antes de que el navegador cambie a la pestaña nueva
+function copyTextNow(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  ta.remove();
+  if (!ok && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+  return ok;
+}
+
+function openInShalom(i) {
+  const a = state.results[i] && state.results[i].agency;
+  if (!a) return;
+  const distrito = a.distrito || a.provincia || a.departamento;
+  const ok = copyTextNow(distrito);
+  toast(ok
+    ? `Se copió «${distrito}». En la página de Shalom, pega (Ctrl+V) en el buscador y busca la agencia «${a.nombre}».`
+    : `En la página de Shalom, escribe «${distrito}» en el buscador y busca la agencia «${a.nombre}».`, 'ok');
+}
+
 // La ruta usa las coordenadas exactas del cliente y de la agencia
 function routeUrl(g, a) {
   return `https://www.google.com/maps/dir/?api=1&origin=${round(g.lat, 6)},${round(g.lng, 6)}&destination=${a.lat},${a.lng}`;
@@ -1910,7 +1940,7 @@ function rowHtml(i) {
     ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}${a.categoria ? ` · ${esc(a.categoria)}` : ''}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}${copyBtn}`
     : (r.status === 'done' || r.status === 'error' ? '<span class="sub">Sin agencia sugerida</span>' : '<span class="sub">—</span>');
   const links = a
-    ? `<div class="maplinks"><a href="${esc(mapsAgencyUrl(a))}" target="_blank" rel="noopener" title="Abrir la ficha de la agencia en Google Maps">Ver agencia</a>${r.geo ? `<a href="${routeUrl(r.geo, a)}" target="_blank" rel="noopener" title="Cómo llegar desde la ubicación del cliente hasta la agencia">Ver ruta</a>` : ''}</div>`
+    ? `<div class="maplinks"><a href="${esc(mapsAgencyUrl(a))}" target="_blank" rel="noopener" title="Abrir la ficha de la agencia en Google Maps">Ver en Maps</a><a href="${SHALOM_AGENCIAS_URL}" target="_blank" rel="noopener" data-shalom="${i}" title="Abre shalom.com.pe/agencias y copia el distrito para pegarlo en su buscador">Ver en Shalom</a>${r.geo ? `<a href="${routeUrl(r.geo, a)}" target="_blank" rel="noopener" title="Cómo llegar desde la ubicación del cliente hasta la agencia">Ver ruta</a>` : ''}</div>`
     : '—';
   return `
     <td class="c-idx" data-label="#">${i + 1}</td>
@@ -1925,7 +1955,7 @@ function rowHtml(i) {
     <td class="col-agaddr" data-label="Dirección Agencia">${a ? `<div>${esc(a.direccion)}</div>${a.referencia ? `<div class="sub">${esc(a.referencia)}</div>` : ''}` : '—'}</td>
     <td class="num" data-label="Distancia (km)">${r.km != null ? `<span class="km">${fmtKm(r.km)}</span>` : '—'}</td>
     <td class="col-prec" data-label="Precisión">${badgeHtml(r)}${r.note ? `<div class="sub">${esc(r.note)}</div>` : ''}<div class="prec-action"><button type="button" class="btn btn-ghost btn-sm" data-edit="${i}" ${state.processing ? 'disabled' : ''}>Corregir</button></div></td>
-    <td data-label="Google Maps">${links}</td>`;
+    <td data-label="Ver agencia">${links}</td>`;
 }
 
 function rowMatchesFilter(i) {
@@ -2420,6 +2450,8 @@ function bindEvents() {
   });
 
   $('#tbody').addEventListener('click', (e) => {
+    const sh = e.target.closest('[data-shalom]');
+    if (sh) { openInShalom(Number(sh.dataset.shalom)); return; }   // el enlace sigue abriendo la página
     const c = e.target.closest('[data-copy]');
     if (c) { copyMessage(Number(c.dataset.copy)); return; }
     const b = e.target.closest('[data-edit]');

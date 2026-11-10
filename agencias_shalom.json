@@ -3,7 +3,7 @@
     "descripcion": "Agencias Shalom vigentes para el Buscador de Agencias Shalom.",
     "fuente": "Agencias visibles en https://shalom.com.pe/agencias (exportadas el 2026-11-10).",
     "fecha_extraccion": "2026-11-10",
-    "total_agencias": 498
+    "total_agencias": 496
   },
   "agencias": [
     {
@@ -4057,21 +4057,6 @@
       "ubigeo": 150115
     },
     {
-      "id": "SH-5",
-      "nombre": "Jr. Luna Pizarro",
-      "departamento": "Lima",
-      "provincia": "Lima",
-      "distrito": "La Victoria",
-      "direccion": "Jr. Luna Pizarro N° 701 - la Victoria",
-      "referencia": "Esquina Hipólito Unanue",
-      "latitud": -12.067059,
-      "longitud": -77.027326,
-      "categoria": "Solo Envíos",
-      "horario": "Lunes a Viernes - 8Am a 8Pm",
-      "telefono": "01 500 7878",
-      "ubigeo": 150115
-    },
-    {
       "id": "SH-43",
       "nombre": "Jr. Raymondi",
       "departamento": "Lima",
@@ -5135,21 +5120,6 @@
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "01 5007878",
       "ubigeo": 150135
-    },
-    {
-      "id": "SH-546",
-      "nombre": "Av Huarochiri Envios",
-      "departamento": "Lima",
-      "provincia": "Lima",
-      "distrito": "Santa Anita",
-      "direccion": "Av. Huarochiri Mz. D8 Lt. 13, Urb. los Cedros, Santa Anita - Lima",
-      "referencia": "A Media Cdra. del Cruce con Av. Santa Rosa",
-      "latitud": -12.041807,
-      "longitud": -76.952602,
-      "categoria": "Solo Envíos",
-      "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
-      "telefono": "(01) 500 7878",
-      "ubigeo": 150137
     },
     {
       "id": "SH-495",
