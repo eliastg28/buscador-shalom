@@ -3,7 +3,7 @@
     "descripcion": "Agencias Shalom vigentes para el Buscador de Agencias Shalom.",
     "fuente": "Agencias visibles en https://shalom.com.pe/agencias (exportadas el 2026-11-10).",
     "fecha_extraccion": "2026-11-10",
-    "total_agencias": 499
+    "total_agencias": 498
   },
   "agencias": [
     {
@@ -5525,21 +5525,6 @@
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "(01) 500 7878",
       "ubigeo": 160101
-    },
-    {
-      "id": "SH-594",
-      "nombre": "Av Jose A. Quiñones",
-      "departamento": "Loreto",
-      "provincia": "Maynas",
-      "distrito": "Iquitos San Juan Bautista",
-      "direccion": "Av. José Abelardo Quiñones # 2475 San Juan Bautista - Maynas - Loreto",
-      "referencia": "Frente a la Universidad Científica del Perú (Ucp)",
-      "latitud": -3.770416,
-      "longitud": -73.281971,
-      "categoria": "Punto Pro",
-      "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
-      "telefono": "(01) 500 7878",
-      "ubigeo": 160113
     },
     {
       "id": "SH-497",

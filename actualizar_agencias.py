@@ -44,6 +44,8 @@ EXCLUIR_NOMBRE = re.compile(
     re.I,
 )
 EXCLUIR_CATEGORIA = {"PUNTO PRO", "SOLO ENVÍOS", "SOLO ENVIOS"}
+# Categorías de la página oficial que no se sugieren al cliente (los Puntos PRO solo reciben envíos)
+EXCLUIR_WEB = {"PUNTO PRO"}
 
 MINUSCULAS = {"de", "del", "la", "las", "los", "el", "y", "e", "a", "al", "en", "con", "por"}
 ROMANOS = {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii"}
@@ -215,6 +217,9 @@ def desde_web(ruta, crudas):
         # Mismo filtro que usa la página para la pestaña "Agencias"
         visibles = [a for a in export["agencias"] if a.get("web") == 1 and a.get("agente") == 0 and a.get("puntospro") == 0]
         for v in visibles:
+            if sin_tildes(limpiar(v.get("categoria")).upper()) in EXCLUIR_WEB:
+                descartadas.append((limpiar(v.get("nombre")), "Punto PRO (no es agencia de recojo)"))
+                continue
             reg = {
                 "ter_id": v.get("ter_id"), "lugar_over": v.get("nombre"), "zona": v.get("zona"),
                 "provincia": v.get("provincia"), "departamento": v.get("departamento"), "direccion": v.get("direccion"),
@@ -237,6 +242,9 @@ def desde_web(ruta, crudas):
             por_nombre.setdefault(norm(a.get("lugar_over")), []).append(a)
         usados = set()
         for v in export["agencias"]:
+            if sin_tildes(limpiar(v.get("categoria")).upper()) in EXCLUIR_WEB:
+                descartadas.append((limpiar(v.get("nombre")), "Punto PRO (no es agencia de recojo)"))
+                continue
             candidatos = [a for a in por_nombre.get(norm(v.get("nombre")), []) if str(a.get("ter_id")) not in usados]
             if not candidatos:
                 descartadas.append((limpiar(v.get("nombre")), "no está en el catálogo"))
