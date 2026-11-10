@@ -813,6 +813,7 @@ function parseAgencias(json) {
       lat,
       lng,
       aproximada: a.precision_coordenadas === 'aproximada',
+      categoria: clean(a.categoria),
       _dist: norm(a.distrito),
       _prov: norm(a.provincia),
     });
@@ -869,7 +870,8 @@ function localAgencies(f, provinceFallback = false) {
   const place = placeOf(f);
   const dists = place.distritos.map(norm).filter(Boolean);
   const pool = state.agencias.filter((a) => sameDept(a.departamento, place.departamento));
-  const byDist = dists.length ? pool.filter((a) => dists.includes(a._dist)) : [];
+  const sameDistrict = (a) => dists.some((d) => a._dist === d || ` ${a._dist} `.includes(` ${d} `));
+  const byDist = dists.length ? pool.filter(sameDistrict) : [];
   if (byDist.length || !provinceFallback) return byDist;
   const provs = [norm(place.provincia), ...dists].filter(Boolean);
   return provs.length ? pool.filter((a) => provs.includes(a._prov)) : [];
@@ -1905,7 +1907,7 @@ function rowHtml(i) {
     ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="Copia el mensaje de WhatsApp con esta agencia">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button></div>`
     : '';
   const agCell = a
-    ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}${copyBtn}`
+    ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}${a.categoria ? ` · ${esc(a.categoria)}` : ''}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}${copyBtn}`
     : (r.status === 'done' || r.status === 'error' ? '<span class="sub">Sin agencia sugerida</span>' : '<span class="sub">—</span>');
   const links = a
     ? `<div class="maplinks"><a href="${esc(mapsAgencyUrl(a))}" target="_blank" rel="noopener" title="Abrir la ficha de la agencia en Google Maps">Ver agencia</a>${r.geo ? `<a href="${routeUrl(r.geo, a)}" target="_blank" rel="noopener" title="Cómo llegar desde la ubicación del cliente hasta la agencia">Ver ruta</a>` : ''}</div>`

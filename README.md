@@ -7,7 +7,8 @@ Aplicación 100 % frontend que lee un Excel o CSV de clientes de todo el Perú y
 | Archivo | Para qué sirve |
 |---|---|
 | `index.html` | La aplicación completa (HTML, CSS y JavaScript). |
-| `agencias_shalom.json` | Base de 475 agencias Shalom de los 25 departamentos, con coordenadas. |
+| `agencias_shalom.json` | Base de 494 agencias Shalom vigentes de los 25 departamentos, con dirección, referencia y coordenadas. |
+| `actualizar_agencias.py` | Vuelve a descargar el catálogo vigente y regenera `agencias_shalom.json`. |
 | `generar_excel_prueba.py` | Genera `clientes_prueba_peru.xlsx` con 13 clientes de prueba (formato antiguo). |
 | `clientes_prueba_peru.xlsx` | Excel de prueba ya generado. |
 
@@ -68,33 +69,39 @@ Las búsquedas se guardan en caché en el navegador durante 30 días, así que r
 
 ## Actualizar la base de agencias
 
-`agencias_shalom.json` tiene la forma:
+`agencias_shalom.json` es el catálogo de agencias del sistema de Shalom, el mismo que muestra https://shalom.com.pe/agencias, con la dirección y la referencia que publica Shalom y coordenadas oficiales. Se obtiene del listado público de [shalom-api.lat](https://shalom-api.lat/docs/agencias), que sincroniza ese catálogo cada 3 horas. La web oficial cifra sus datos y no permite descargarlos directamente.
+
+Para actualizarla, cada cierto tiempo:
+
+```bash
+python actualizar_agencias.py
+git add agencias_shalom.json
+git commit -m "Actualiza agencias Shalom"
+git push
+```
+
+El script no necesita instalar nada. Deja fuera los Puntos PRO, las agencias solo de envío, los aeropuertos, los almacenes, los registros internos y las agencias deshabilitadas.
+
+Cada agencia tiene esta forma:
 
 ```json
 {
-  "meta": { "fecha_extraccion": "2026-09-29" },
-  "agencias": [
-    {
-      "id": "SH-001",
-      "nombre": "Calle Liverpool",
-      "departamento": "La Libertad",
-      "provincia": "Trujillo",
-      "distrito": "Trujillo",
-      "direccion": "Calle liverpool n° 329 / urb. santa isabel - trujillo",
-      "referencia": "A una cuadra antes de la iglesia de mansiche",
-      "latitud": -8.103728,
-      "longitud": -79.042822,
-      "precision_coordenadas": "fuente",
-      "horario_lv": "8:00 AM A 8:00 PM",
-      "horario_dom": "8:00 AM A 5:00 PM",
-      "telefono": "(01) 500 - 7878"
-    }
-  ]
+  "id": "SH-258",
+  "nombre": "Av Pachacutec",
+  "departamento": "Cusco",
+  "provincia": "Cusco",
+  "distrito": "Wanchaq",
+  "direccion": "Av. Pachacutec 429 - Wanchaq",
+  "referencia": "A 100 Mtrs. de la Piscina Wanchaq",
+  "latitud": -13.524396,
+  "longitud": -71.970137,
+  "categoria": "Micro",
+  "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
+  "telefono": "(01) 500 7878",
+  "ubigeo": 80108
 }
 ```
 
-Solo `nombre`, `latitud` y `longitud` son obligatorios. También se acepta una lista simple de agencias sin `meta`. Para probar otra base sin publicarla, usa el botón **Cargar otro JSON de agencias**.
-
-Los datos se tomaron el 29/09/2026 de un listado público de agencias. 23 agencias no tenían coordenadas publicadas y se ubicaron de forma aproximada con OpenStreetMap; tienen `"precision_coordenadas": "aproximada"` y la app las marca en la tabla. Shalom abre y cierra agencias con frecuencia: confirma la agencia antes de enviar.
+Solo `nombre`, `latitud` y `longitud` son obligatorios. Para probar otra base sin publicarla, usa el botón **Cargar otro JSON de agencias**.
 
 Herramienta independiente, sin afiliación con Shalom Empresarial S.A.C.
