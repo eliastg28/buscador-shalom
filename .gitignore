@@ -5,3 +5,6 @@ Pedidos Shopify.xlsx
 ~$*
 .DS_Store
 Thumbs.db
+# Copias de la web de Shalom usadas para actualizar la base (se regeneran)
+shalom_agencias.html
+agencias_web_shalom.json

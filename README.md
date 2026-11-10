@@ -7,9 +7,9 @@ Aplicación 100 % frontend que lee un Excel o CSV de clientes de todo el Perú y
 | Archivo | Para qué sirve |
 |---|---|
 | `index.html` | La aplicación completa (HTML, CSS y JavaScript). |
-| `agencias_shalom.json` | Base de 494 agencias Shalom vigentes de los 25 departamentos, con dirección, referencia y coordenadas. |
+| `agencias_shalom.json` | Las 499 agencias que muestra shalom.com.pe/agencias, con dirección, referencia, categoría y coordenadas. |
 | `exportar_agencias_shalom.js` | Script para la consola del navegador que exporta las agencias visibles en shalom.com.pe/agencias. |
-| `actualizar_agencias.py` | Regenera `agencias_shalom.json` con esas agencias. |
+| `actualizar_agencias.py` | Regenera `agencias_shalom.json` a partir del HTML guardado de shalom.com.pe/agencias. |
 | `generar_excel_prueba.py` | Genera `clientes_prueba_peru.xlsx` con 13 clientes de prueba (formato antiguo). |
 | `clientes_prueba_peru.xlsx` | Excel de prueba ya generado. |
 
@@ -70,22 +70,23 @@ Las búsquedas se guardan en caché en el navegador durante 30 días, así que r
 
 ## Actualizar la base de agencias
 
-La app debe usar **solo las agencias que muestra https://shalom.com.pe/agencias** (pestaña "Agencias"). Esa página cifra sus datos y no permite descargarlos automáticamente, así que la lista se exporta desde tu propio navegador:
+La app usa **solo las agencias que muestra https://shalom.com.pe/agencias** (pestaña "Agencias"). Esa página cifra sus datos y no permite descargarlos automáticamente, así que se guarda su HTML desde el navegador:
 
-1. Abre https://shalom.com.pe/agencias en Chrome o Edge y espera a que cargue la lista, sin escribir nada en el buscador.
-2. Presiona **F12**, entra a **Console**, pega el contenido de `exportar_agencias_shalom.js` y presiona Enter. La primera vez Chrome puede pedir que escribas `allow pasting`.
-3. Se descarga `agencias_web_shalom.json`. Muévelo a la carpeta del proyecto y ejecuta:
+1. Abre https://shalom.com.pe/agencias en Chrome o Edge, deja la pestaña "Agencias" sin texto en el buscador y haz scroll en la lista hasta el final.
+2. Presiona **F12**. En la pestaña **Elements**, haz clic derecho sobre la primera línea `<html>` y elige **Copy > Copy outerHTML**.
+3. En VS Code crea el archivo `shalom_agencias.html` en la carpeta del proyecto, pega y guarda.
+4. Ejecuta:
 
 ```bash
-python actualizar_agencias.py agencias_web_shalom.json
+python actualizar_agencias.py shalom_agencias.html
 git add agencias_shalom.json
 git commit -m "Actualiza agencias Shalom"
 git push
 ```
 
-El script aplica el mismo filtro que la página oficial: publicadas en la web, sin agentes ni Puntos PRO. Las coordenadas se toman de la propia página y, si faltan, del catálogo de [shalom-api.lat](https://shalom-api.lat/docs/agencias). Al final lista las agencias que no se pudieron usar y el motivo.
+El script lee del HTML el nombre, la dirección, la referencia y la categoría de cada agencia. Las coordenadas las toma del catálogo de [shalom-api.lat](https://shalom-api.lat/docs/agencias), buscando cada agencia por nombre y dirección. Al final indica cuántas agencias usó y cuáles no pudo usar. El HTML no se sube a GitHub.
 
-Sin el archivo exportado, `python actualizar_agencias.py` arma una aproximación con las marcas internas del catálogo de shalom-api.lat.
+Alternativa: pegar `exportar_agencias_shalom.js` en la consola de esa página genera `agencias_web_shalom.json`, que se usa igual: `python actualizar_agencias.py agencias_web_shalom.json`.
 
 Cada agencia tiene esta forma:
 

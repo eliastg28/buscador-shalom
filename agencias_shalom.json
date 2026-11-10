@@ -1,10 +1,9 @@
 {
   "meta": {
     "descripcion": "Agencias Shalom vigentes para el Buscador de Agencias Shalom.",
-    "fuente": "Catálogo de agencias del sistema de Shalom vía https://shalom-api.lat (listado público).",
+    "fuente": "Agencias visibles en https://shalom.com.pe/agencias (exportadas el 2026-11-10).",
     "fecha_extraccion": "2026-11-10",
-    "total_agencias": 494,
-    "excluidas": "Puntos PRO, agencias solo de envío, aeropuertos, almacenes, registros internos y deshabilitadas."
+    "total_agencias": 499
   },
   "agencias": [
     {
@@ -857,7 +856,7 @@
       "referencia": "A Una Cdra. del Terrapuerto y a 100 Mts. del Puente de Ingreso a Chilete",
       "latitud": -7.222502,
       "longitud": -78.838028,
-      "categoria": "",
+      "categoria": "Terminal",
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "(01) 500 7878",
       "ubigeo": 60502
@@ -1442,7 +1441,7 @@
       "referencia": "Al Costado de Techo Propio",
       "latitud": -12.522202,
       "longitud": -73.823763,
-      "categoria": "",
+      "categoria": "Terminal",
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "01 500 7878",
       "ubigeo": 80910
@@ -1836,6 +1835,21 @@
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "(01) 500 7878",
       "ubigeo": 110112
+    },
+    {
+      "id": "SH-518",
+      "nombre": "El Ingenio",
+      "departamento": "Ica",
+      "provincia": "Nazca",
+      "distrito": "El Ingenio",
+      "direccion": "Av. Principal Tulin 204, el Ingenio - Nazca - Ica",
+      "referencia": "Fremte a a la Plaza de Tulin",
+      "latitud": -14.647201,
+      "longitud": -75.070652,
+      "categoria": "Mediana",
+      "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
+      "telefono": "(01) 500 7878",
+      "ubigeo": 110303
     },
     {
       "id": "SH-131",
@@ -2642,7 +2656,7 @@
       "referencia": "A Una Cdra. de Av. America Norte. / Entre Av. Miraflores y Av. Salvador Lara",
       "latitud": -8.098823,
       "longitud": -79.023393,
-      "categoria": "Micro",
+      "categoria": "Pequeña",
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "(01) 500 7878",
       "ubigeo": 130101
@@ -3908,6 +3922,21 @@
       "ubigeo": 150112
     },
     {
+      "id": "SH-244",
+      "nombre": "Plaza Norte S. Express",
+      "departamento": "Lima",
+      "provincia": "Lima",
+      "distrito": "Independencia",
+      "direccion": "Av. Gerardo Unger Nro. 6917 Int. Lb 19",
+      "referencia": "",
+      "latitud": -12.004946,
+      "longitud": -77.055867,
+      "categoria": "Micro",
+      "horario": "Lunes a Viernes - 8Am a 8Pm",
+      "telefono": "",
+      "ubigeo": 150112
+    },
+    {
       "id": "SH-374",
       "nombre": "Jesus Maria",
       "departamento": "Lima",
@@ -4025,6 +4054,21 @@
       "categoria": "Mini-micro",
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "01 5007878",
+      "ubigeo": 150115
+    },
+    {
+      "id": "SH-5",
+      "nombre": "Jr. Luna Pizarro",
+      "departamento": "Lima",
+      "provincia": "Lima",
+      "distrito": "La Victoria",
+      "direccion": "Jr. Luna Pizarro N° 701 - la Victoria",
+      "referencia": "Esquina Hipólito Unanue",
+      "latitud": -12.067059,
+      "longitud": -77.027326,
+      "categoria": "Solo Envíos",
+      "horario": "Lunes a Viernes - 8Am a 8Pm",
+      "telefono": "01 500 7878",
       "ubigeo": 150115
     },
     {
@@ -4202,7 +4246,7 @@
       "referencia": "A Una Cdra. del Colegio José María Arguedas",
       "latitud": -11.933223,
       "longitud": -77.073028,
-      "categoria": "",
+      "categoria": "Terminal",
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "01 500 7878",
       "ubigeo": 150117
@@ -4218,21 +4262,6 @@
       "latitud": -11.933529,
       "longitud": -76.693335,
       "categoria": "Pequeña",
-      "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
-      "telefono": "(01) 500 7878",
-      "ubigeo": 150118
-    },
-    {
-      "id": "SH-365",
-      "nombre": "Huachipa Co",
-      "departamento": "Lima",
-      "provincia": "Lima",
-      "distrito": "Lurigancho",
-      "direccion": "Huachipa Este - Manzana A18 Lote 1, 2, 3 Calle B, Calle 08, Calle a",
-      "referencia": "Al Costado de Industrias Eléctricas Kba",
-      "latitud": -11.93555,
-      "longitud": -76.868334,
-      "categoria": "Grande / Co",
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "(01) 500 7878",
       "ubigeo": 150118
@@ -4868,6 +4897,21 @@
       "ubigeo": 150135
     },
     {
+      "id": "SH-431",
+      "nombre": "Av Jose Granda Cdra 38",
+      "departamento": "Lima",
+      "provincia": "Lima",
+      "distrito": "San Martin de Porres",
+      "direccion": "Av. José Granda 3826 de la Urb. Condevilla Señor y Valdivieso Mz. M7 Lt 20, 2 Etapa, 2 Sector - S.m.p",
+      "referencia": "Entre Av. Condevilla y Av. los Próceres",
+      "latitud": -12.020561,
+      "longitud": -77.087056,
+      "categoria": "Pequeña",
+      "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
+      "telefono": "(01) 500 7878",
+      "ubigeo": 150135
+    },
+    {
       "id": "SH-462",
       "nombre": "Av Jose Granda Cdra. 25",
       "departamento": "Lima",
@@ -5072,7 +5116,7 @@
       "referencia": "A 3 Cdras. del Cruce con Av. el Sol de Naranjal",
       "latitud": -11.97112,
       "longitud": -77.100521,
-      "categoria": "",
+      "categoria": "Terminal",
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "01 500 7878",
       "ubigeo": 150135
@@ -5091,6 +5135,21 @@
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "01 5007878",
       "ubigeo": 150135
+    },
+    {
+      "id": "SH-546",
+      "nombre": "Av Huarochiri Envios",
+      "departamento": "Lima",
+      "provincia": "Lima",
+      "distrito": "Santa Anita",
+      "direccion": "Av. Huarochiri Mz. D8 Lt. 13, Urb. los Cedros, Santa Anita - Lima",
+      "referencia": "A Media Cdra. del Cruce con Av. Santa Rosa",
+      "latitud": -12.041807,
+      "longitud": -76.952602,
+      "categoria": "Solo Envíos",
+      "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
+      "telefono": "(01) 500 7878",
+      "ubigeo": 150137
     },
     {
       "id": "SH-495",
@@ -5402,7 +5461,7 @@
       "referencia": "A Media Cdra. de la Plaza de Armas y de la Municipalidad",
       "latitud": -10.806835,
       "longitud": -76.876111,
-      "categoria": "",
+      "categoria": "Terminal",
       "horario": "Lunes a Viernes - 8:00 AM a 7:00 PM",
       "telefono": "(01) 500 7878",
       "ubigeo": 150906
@@ -5466,6 +5525,21 @@
       "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
       "telefono": "(01) 500 7878",
       "ubigeo": 160101
+    },
+    {
+      "id": "SH-594",
+      "nombre": "Av Jose A. Quiñones",
+      "departamento": "Loreto",
+      "provincia": "Maynas",
+      "distrito": "Iquitos San Juan Bautista",
+      "direccion": "Av. José Abelardo Quiñones # 2475 San Juan Bautista - Maynas - Loreto",
+      "referencia": "Frente a la Universidad Científica del Perú (Ucp)",
+      "latitud": -3.770416,
+      "longitud": -73.281971,
+      "categoria": "Punto Pro",
+      "horario": "Lunes a Viernes - 8:00 AM a 8:00 PM",
+      "telefono": "(01) 500 7878",
+      "ubigeo": 160113
     },
     {
       "id": "SH-497",

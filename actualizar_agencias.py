@@ -8,10 +8,12 @@ refresca cada 3 horas. Es un endpoint de demostración sin API key: úsalo solo 
 esta base de vez en cuando, no en cada visita a la app.
 
 Uso (no requiere instalar nada):
-    python actualizar_agencias.py agencias_web_shalom.json   # SOLO las agencias que muestra shalom.com.pe/agencias
-    python actualizar_agencias.py                            # sin exportación: aproxima con las marcas del catálogo
+    python actualizar_agencias.py shalom_agencias.html       # SOLO las agencias que muestra shalom.com.pe/agencias
+    python actualizar_agencias.py agencias_web_shalom.json   # igual, con la exportación de exportar_agencias_shalom.js
+    python actualizar_agencias.py                            # sin la página: aproxima con las marcas del catálogo
 
-El archivo agencias_web_shalom.json se obtiene con exportar_agencias_shalom.js (instrucciones en ese archivo).
+shalom_agencias.html es el HTML de https://shalom.com.pe/agencias copiado desde DevTools
+(pestaña Elements, clic derecho en <html>, Copy > Copy outerHTML). Ver README.md.
 """
 import json
 import re
@@ -19,6 +21,7 @@ import sys
 import unicodedata
 import urllib.request
 from difflib import SequenceMatcher
+from html.parser import HTMLParser
 from datetime import date
 from pathlib import Path
 
@@ -153,9 +156,58 @@ def desde_catalogo(crudas):
     return agencias, descartadas, fuente
 
 
+class ListaAgenciasHTML(HTMLParser):
+    """Lee la lista de la pestaña "Agencias" del HTML de shalom.com.pe/agencias."""
+
+    def __init__(self):
+        super().__init__()
+        self.items, self.actual, self.nivel, self.campo, self.texto = [], None, 0, None, []
+
+    def handle_starttag(self, tag, attrs):
+        clases = dict(attrs).get("class") or ""
+        if self.actual is None:
+            if tag == "div" and "flex flex-row py-4 cursor-pointer" in clases:
+                self.actual, self.nivel = {"nombre": "", "direccion": "", "categoria": ""}, 1
+            return
+        self.nivel += 1
+        if tag == "p" and "text-color-description-air" in clases:
+            self.campo, self.texto = "nombre", []
+        elif tag == "p" and "text-color-description-agen" in clases:
+            self.campo, self.texto = "direccion", []
+        elif tag == "div" and "text-red-shalom" in clases:
+            self.campo, self.texto = "categoria", []
+
+    def handle_endtag(self, tag):
+        if self.actual is None:
+            return
+        if self.campo and tag in ("p", "div"):
+            self.actual[self.campo] = limpiar("".join(self.texto))
+            self.campo = None
+        self.nivel -= 1
+        if self.nivel == 0:
+            if self.actual["nombre"]:
+                self.items.append(self.actual)
+            self.actual = None
+
+    def handle_data(self, data):
+        if self.campo:
+            self.texto.append(data)
+
+
+def leer_exportacion(ruta):
+    texto = Path(ruta).read_text(encoding="utf-8", errors="replace")
+    if ruta.lower().endswith((".html", ".htm")) or texto.lstrip().startswith("<"):
+        lector = ListaAgenciasHTML()
+        lector.feed(texto)
+        if not lector.items:
+            sys.exit("No se encontró la lista de agencias en el HTML. Copia el outerHTML de <html> con la lista ya cargada.")
+        return {"fuente": "lista", "fecha": date.today().isoformat(), "agencias": lector.items}
+    return json.loads(texto)
+
+
 def desde_web(ruta, crudas):
-    """Con la exportación de shalom.com.pe/agencias: usa exactamente las agencias que muestra la página."""
-    export = json.loads(Path(ruta).read_text(encoding="utf-8"))
+    """Con la página shalom.com.pe/agencias: usa exactamente las agencias que muestra."""
+    export = leer_exportacion(ruta)
     por_id = {str(a.get("ter_id")): a for a in crudas}
     agencias, descartadas = [], []
 
@@ -193,7 +245,10 @@ def desde_web(ruta, crudas):
             elegido = candidatos[0]
             usados.add(str(elegido.get("ter_id")))
             if coords_validas(elegido):
-                agencias.append(armar(elegido))
+                registro = armar(elegido)
+                if v.get("categoria"):
+                    registro["categoria"] = titulo(v["categoria"])   # la categoría que muestra la página oficial
+                agencias.append(registro)
             else:
                 descartadas.append((limpiar(v.get("nombre")), "sin coordenadas en el catálogo"))
         print(f"La página muestra {len(export['agencias'])} agencias.")
