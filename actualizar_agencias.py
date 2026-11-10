@@ -8,13 +8,17 @@ refresca cada 3 horas. Es un endpoint de demostración sin API key: úsalo solo 
 esta base de vez en cuando, no en cada visita a la app.
 
 Uso (no requiere instalar nada):
-    python actualizar_agencias.py
+    python actualizar_agencias.py agencias_web_shalom.json   # SOLO las agencias que muestra shalom.com.pe/agencias
+    python actualizar_agencias.py                            # sin exportación: aproxima con las marcas del catálogo
+
+El archivo agencias_web_shalom.json se obtiene con exportar_agencias_shalom.js (instrucciones en ese archivo).
 """
 import json
 import re
 import sys
 import unicodedata
 import urllib.request
+from difflib import SequenceMatcher
 from datetime import date
 from pathlib import Path
 
@@ -81,7 +85,7 @@ def sin_tildes(texto):
     return unicodedata.normalize("NFD", texto).encode("ascii", "ignore").decode()
 
 
-def main():
+def descargar_catalogo():
     print(f"Descargando {URL} ...")
     req = urllib.request.Request(URL, headers={"Accept": "application/json", "User-Agent": "buscador-agencias-shalom/1.0"})
     with urllib.request.urlopen(req, timeout=60) as resp:
@@ -89,16 +93,53 @@ def main():
     crudas = datos.get("data") or []
     if not crudas:
         sys.exit("La respuesta no trae agencias; no se modificó agencias_shalom.json")
+    return crudas
 
+
+def armar(a):
+    """Convierte un registro con los campos del sistema de Shalom al formato de la app."""
+    lat, lng = coordenada(a.get("latitud")), coordenada(a.get("longitud"))
+    direccion, referencia = separar_referencia(a.get("direccion"))
+    dep = DEPARTAMENTOS.get(sin_tildes(limpiar(a.get("departamento")).upper()), titulo(a.get("departamento")))
+    horario = limpiar(a.get("hora_atencion"))
+    if limpiar(a.get("hora_domingo")):
+        horario += f" | Domingo: {limpiar(a.get('hora_domingo'))}"
+    return {
+        "id": f"SH-{a.get('ter_id')}",
+        "nombre": titulo(a.get("lugar_over") or a.get("nombre")),
+        "departamento": dep,
+        "provincia": titulo(a.get("provincia")),
+        "distrito": titulo(a.get("zona")),
+        "direccion": titulo(direccion),
+        "referencia": titulo(referencia),
+        "latitud": round(lat, 6),
+        "longitud": round(lng, 6),
+        "categoria": titulo(a.get("ter_categoria")),
+        "horario": titulo(horario),
+        "telefono": limpiar(a.get("telefono")),
+        "ubigeo": a.get("ubi_id"),
+    }
+
+
+def coords_validas(a):
+    lat, lng = coordenada(a.get("latitud")), coordenada(a.get("longitud"))
+    return lat is not None and lng is not None and -18.6 < lat < 0.4 and -81.6 < lng < -68.4
+
+
+def norm(texto):
+    return re.sub(r"[^a-z0-9]+", " ", sin_tildes(limpiar(texto).lower())).strip()
+
+
+def desde_catalogo(crudas):
+    """Sin exportación de la web: aproxima la lista pública con las marcas del catálogo."""
     agencias, descartadas = [], []
     for a in crudas:
-        lat, lng = coordenada(a.get("latitud")), coordenada(a.get("longitud"))
         nombre = limpiar(a.get("lugar_over") or a.get("nombre"))
         categoria = limpiar(a.get("ter_categoria")).upper()
         motivo = None
         if str(a.get("ter_habilitado_OS")) != "1":
             motivo = "deshabilitada en el sistema"
-        elif lat is None or lng is None or not (-18.6 < lat < 0.4 and -81.6 < lng < -68.4):
+        elif not coords_validas(a):
             motivo = "sin coordenadas"
         elif categoria in EXCLUIR_CATEGORIA:
             motivo = categoria.lower()
@@ -106,44 +147,85 @@ def main():
             motivo = "registro interno"
         if motivo:
             descartadas.append((nombre, motivo))
-            continue
+        else:
+            agencias.append(armar(a))
+    fuente = "Catálogo de agencias del sistema de Shalom vía https://shalom-api.lat (listado público), filtrado por sus marcas internas."
+    return agencias, descartadas, fuente
 
-        direccion, referencia = separar_referencia(a.get("direccion"))
-        dep = DEPARTAMENTOS.get(sin_tildes(limpiar(a.get("departamento")).upper()), titulo(a.get("departamento")))
-        horario = limpiar(a.get("hora_atencion"))
-        if limpiar(a.get("hora_domingo")):
-            horario += f" | Domingo: {limpiar(a.get('hora_domingo'))}"
-        agencias.append({
-            "id": f"SH-{a.get('ter_id')}",
-            "nombre": titulo(nombre),
-            "departamento": dep,
-            "provincia": titulo(a.get("provincia")),
-            "distrito": titulo(a.get("zona")),
-            "direccion": titulo(direccion),
-            "referencia": titulo(referencia),
-            "latitud": round(lat, 6),
-            "longitud": round(lng, 6),
-            "categoria": titulo(categoria),
-            "horario": titulo(horario),
-            "telefono": limpiar(a.get("telefono")),
-            "ubigeo": a.get("ubi_id"),
-        })
+
+def desde_web(ruta, crudas):
+    """Con la exportación de shalom.com.pe/agencias: usa exactamente las agencias que muestra la página."""
+    export = json.loads(Path(ruta).read_text(encoding="utf-8"))
+    por_id = {str(a.get("ter_id")): a for a in crudas}
+    agencias, descartadas = [], []
+
+    if export.get("fuente") == "app":
+        # Mismo filtro que usa la página para la pestaña "Agencias"
+        visibles = [a for a in export["agencias"] if a.get("web") == 1 and a.get("agente") == 0 and a.get("puntospro") == 0]
+        for v in visibles:
+            reg = {
+                "ter_id": v.get("ter_id"), "lugar_over": v.get("nombre"), "zona": v.get("zona"),
+                "provincia": v.get("provincia"), "departamento": v.get("departamento"), "direccion": v.get("direccion"),
+                "latitud": v.get("latitud"), "longitud": v.get("longitud"), "ter_categoria": v.get("categoria"),
+                "telefono": v.get("telefono"), "hora_atencion": v.get("hora_atencion"), "hora_domingo": v.get("hora_domingo"),
+                "ubi_id": v.get("ubi_id"),
+            }
+            respaldo = por_id.get(str(v.get("ter_id")))
+            if not coords_validas(reg) and respaldo and coords_validas(respaldo):
+                reg["latitud"], reg["longitud"] = respaldo["latitud"], respaldo["longitud"]
+            if coords_validas(reg):
+                agencias.append(armar(reg))
+            else:
+                descartadas.append((limpiar(v.get("nombre")), "Shalom no publica sus coordenadas"))
+        print(f"La página muestra {len(visibles)} agencias (de {export.get('total_catalogo')} en su catálogo).")
+    else:
+        # Solo nombres y direcciones de la lista visible: se buscan en el catálogo para obtener coordenadas
+        por_nombre = {}
+        for a in crudas:
+            por_nombre.setdefault(norm(a.get("lugar_over")), []).append(a)
+        usados = set()
+        for v in export["agencias"]:
+            candidatos = [a for a in por_nombre.get(norm(v.get("nombre")), []) if str(a.get("ter_id")) not in usados]
+            if not candidatos:
+                descartadas.append((limpiar(v.get("nombre")), "no está en el catálogo"))
+                continue
+            candidatos.sort(key=lambda a: -SequenceMatcher(None, norm(a.get("direccion")), norm(v.get("direccion"))).ratio())
+            elegido = candidatos[0]
+            usados.add(str(elegido.get("ter_id")))
+            if coords_validas(elegido):
+                agencias.append(armar(elegido))
+            else:
+                descartadas.append((limpiar(v.get("nombre")), "sin coordenadas en el catálogo"))
+        print(f"La página muestra {len(export['agencias'])} agencias.")
+
+    fuente = f"Agencias visibles en https://shalom.com.pe/agencias (exportadas el {limpiar(export.get('fecha'))[:10]})."
+    return agencias, descartadas, fuente
+
+
+def main():
+    crudas = descargar_catalogo()
+    if len(sys.argv) > 1:
+        agencias, descartadas, fuente = desde_web(sys.argv[1], crudas)
+    else:
+        agencias, descartadas, fuente = desde_catalogo(crudas)
 
     agencias.sort(key=lambda x: (x["departamento"], x["provincia"], x["distrito"], x["nombre"]))
     doc = {
         "meta": {
             "descripcion": "Agencias Shalom vigentes para el Buscador de Agencias Shalom.",
-            "fuente": "Catálogo de agencias del sistema de Shalom vía https://shalom-api.lat (listado público).",
+            "fuente": fuente,
             "fecha_extraccion": date.today().isoformat(),
             "total_agencias": len(agencias),
-            "excluidas": "Puntos PRO, agencias solo de envío, aeropuertos, almacenes, registros internos y deshabilitadas.",
         },
         "agencias": agencias,
     }
     SALIDA.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     deps = len({a["departamento"] for a in agencias})
     print(f"Listo: {len(agencias)} agencias en {deps} departamentos -> {SALIDA.name}")
-    print(f"Descartadas: {len(descartadas)} (de {len(crudas)} registros del catálogo)")
+    if descartadas:
+        print(f"No se pudieron usar {len(descartadas)}:")
+        for nombre, motivo in descartadas:
+            print(f"  - {nombre}: {motivo}")
 
 
 if __name__ == "__main__":

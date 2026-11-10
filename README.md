@@ -8,7 +8,8 @@ Aplicación 100 % frontend que lee un Excel o CSV de clientes de todo el Perú y
 |---|---|
 | `index.html` | La aplicación completa (HTML, CSS y JavaScript). |
 | `agencias_shalom.json` | Base de 494 agencias Shalom vigentes de los 25 departamentos, con dirección, referencia y coordenadas. |
-| `actualizar_agencias.py` | Vuelve a descargar el catálogo vigente y regenera `agencias_shalom.json`. |
+| `exportar_agencias_shalom.js` | Script para la consola del navegador que exporta las agencias visibles en shalom.com.pe/agencias. |
+| `actualizar_agencias.py` | Regenera `agencias_shalom.json` con esas agencias. |
 | `generar_excel_prueba.py` | Genera `clientes_prueba_peru.xlsx` con 13 clientes de prueba (formato antiguo). |
 | `clientes_prueba_peru.xlsx` | Excel de prueba ya generado. |
 
@@ -69,18 +70,22 @@ Las búsquedas se guardan en caché en el navegador durante 30 días, así que r
 
 ## Actualizar la base de agencias
 
-`agencias_shalom.json` es el catálogo de agencias del sistema de Shalom, el mismo que muestra https://shalom.com.pe/agencias, con la dirección y la referencia que publica Shalom y coordenadas oficiales. Se obtiene del listado público de [shalom-api.lat](https://shalom-api.lat/docs/agencias), que sincroniza ese catálogo cada 3 horas. La web oficial cifra sus datos y no permite descargarlos directamente.
+La app debe usar **solo las agencias que muestra https://shalom.com.pe/agencias** (pestaña "Agencias"). Esa página cifra sus datos y no permite descargarlos automáticamente, así que la lista se exporta desde tu propio navegador:
 
-Para actualizarla, cada cierto tiempo:
+1. Abre https://shalom.com.pe/agencias en Chrome o Edge y espera a que cargue la lista, sin escribir nada en el buscador.
+2. Presiona **F12**, entra a **Console**, pega el contenido de `exportar_agencias_shalom.js` y presiona Enter. La primera vez Chrome puede pedir que escribas `allow pasting`.
+3. Se descarga `agencias_web_shalom.json`. Muévelo a la carpeta del proyecto y ejecuta:
 
 ```bash
-python actualizar_agencias.py
+python actualizar_agencias.py agencias_web_shalom.json
 git add agencias_shalom.json
 git commit -m "Actualiza agencias Shalom"
 git push
 ```
 
-El script no necesita instalar nada. Deja fuera los Puntos PRO, las agencias solo de envío, los aeropuertos, los almacenes, los registros internos y las agencias deshabilitadas.
+El script aplica el mismo filtro que la página oficial: publicadas en la web, sin agentes ni Puntos PRO. Las coordenadas se toman de la propia página y, si faltan, del catálogo de [shalom-api.lat](https://shalom-api.lat/docs/agencias). Al final lista las agencias que no se pudieron usar y el motivo.
+
+Sin el archivo exportado, `python actualizar_agencias.py` arma una aproximación con las marcas internas del catálogo de shalom-api.lat.
 
 Cada agencia tiene esta forma:
 
