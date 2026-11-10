@@ -211,6 +211,15 @@ th.num { text-align: right; }
 .spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .tag { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; background: var(--mid-bg); color: var(--mid); }
+.tag.tag-lima { background: var(--accent-soft); color: var(--accent); margin: 0 0 6px; }
+.zone-filter { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; }
+.zone-filter button { appearance: none; font: inherit; font-size: 13px; font-weight: 600; padding: 8px 12px; border: 0; background: var(--surface); color: var(--text); cursor: pointer; white-space: nowrap; }
+.zone-filter button + button { border-left: 1px solid var(--border-strong); }
+.zone-filter button:hover { background: var(--surface-2); }
+.zone-filter button[aria-pressed=true] { background: var(--accent-soft); color: var(--accent); }
+.zone-filter button small { font-weight: 400; color: var(--muted); margin-left: 4px; }
+.zone-filter button:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.msg-body .label { margin-top: 12px; }
 .copy-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .btn-copy.copied { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
 .msg-box { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
@@ -288,6 +297,8 @@ footer.site p { margin: 4px 0; }
   .map-grid, .dlg-grid { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .segmented { grid-template-columns: 1fr; }
+  .zone-filter { display: flex; width: 100%; }
+  .zone-filter button { flex: 1 1 0; padding: 8px 6px; }
   .dlg-body { padding: 16px; }
 }
 </style>
@@ -388,19 +399,24 @@ footer.site p { margin: 4px 0; }
       </button>
     </div>
     <details class="msg-box" id="msgBox">
-      <summary>Mensaje para WhatsApp</summary>
+      <summary>Mensajes para WhatsApp</summary>
       <div class="msg-body">
-        <p class="hint" style="margin:0 0 8px">Cada cliente tiene un botón <b>Copiar mensaje</b> que arma este texto con su nombre y su agencia. Puedes editarlo: se guarda en este navegador.
-          Campos disponibles: <code>{nombre}</code> primer nombre del cliente, <code>{agencia}</code> nombre de la agencia,
+        <p class="hint" style="margin:0">Cada cliente tiene un botón <b>Copiar mensaje</b>. Los clientes de la provincia de Lima y del Callao reciben el mensaje de entrega por motorizado; los demás, el de la agencia Shalom. Puedes editar los dos mensajes: se guardan en este navegador.</p>
+        <label class="label" for="msgTemplate">Provincias (agencia Shalom)</label>
+        <p class="hint" style="margin:0 0 8px">Campos: <code>{nombre}</code> primer nombre del cliente, <code>{agencia}</code> nombre de la agencia,
           <code>{detalle}</code> la referencia de la agencia (o su dirección si Shalom no publica referencia),
-          <code>{referencia}</code>, <code>{direccion}</code>, <code>{distrito}</code>.</p>
-        <label class="sr-only" for="msgTemplate">Plantilla del mensaje</label>
+          <code>{referencia}</code>, <code>{direccion}</code>, <code>{distrito}</code> de la agencia.</p>
         <textarea id="msgTemplate" spellcheck="false"></textarea>
-        <div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" id="msgReset">Restaurar mensaje original</button></div>
+        <label class="label" for="msgTemplateLima">Lima y Callao (motorizado)</label>
+        <p class="hint" style="margin:0 0 8px">Campos: <code>{nombre}</code> primer nombre del cliente, <code>{direccion_cliente}</code> su dirección y distrito,
+          <code>{referencia_cliente}</code> su referencia, <code>{precio}</code> la columna Precio del Excel (por ejemplo 99.90).</p>
+        <textarea id="msgTemplateLima" spellcheck="false"></textarea>
+        <div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" id="msgReset">Restaurar mensajes originales</button></div>
       </div>
     </details>
     <div class="stats" id="stats"></div>
     <div class="toolbar">
+      <div class="zone-filter" id="zoneFilter" role="group" aria-label="Filtrar por zona de entrega"></div>
       <input type="search" id="filterText" placeholder="Filtrar por cliente, distrito o agencia…" aria-label="Filtrar resultados">
       <span class="count" id="filterCount"></span>
     </div>
@@ -511,6 +527,7 @@ const FIELDS = [
   { key: 'ciudad', label: 'Ciudad y/o Distrito (formato antiguo)', legacy: true, aliases: ['Ciudad y/o Distrito', 'Ciudad y o Distrito', 'Ciudad/Distrito', 'Ciudad - Distrito', 'Ciudad', 'Localidad', 'Ciudad de entrega'] },
   { key: 'direccion', label: 'Dirección', required: true, aliases: ['Dirección Completa', 'Dirección', 'Domicilio', 'Dirección de entrega', 'Dirección de envío'] },
   { key: 'referencia', label: 'Referencia', aliases: ['Referencia de dirección', 'Referencia de la dirección', 'Referencia', 'Referencias', 'Punto de referencia', 'Ref'] },
+  { key: 'precio', label: 'Precio (solo Lima y Callao)', aliases: ['Precio', 'Precio Total', 'Precio de venta', 'Precio S/', 'Precio (S/)', 'Monto', 'Monto a pagar', 'Monto a cobrar', 'Importe', 'Total a pagar'] },
 ];
 
 // Campos relevantes según el formato del archivo (Departamento/Provincia/Distrito o el antiguo Ciudad y/o Distrito)
@@ -522,6 +539,7 @@ function activeFields() {
 
 // Columnas nuevas que se agregan al Excel descargado
 const OUT_COLS = {
+  envio: 'Tipo de Envío',
   busqueda: 'Dirección de Búsqueda',
   estado: 'Estado',
   precision: 'Precisión Ubicación Cliente',
@@ -764,6 +782,7 @@ const state = {
   abort: null,
   provider: 'nominatim',
   filterCat: 'all',
+  filterZone: 'all',
   filterText: '',
   editIndex: -1,
 };
@@ -996,6 +1015,7 @@ function setTable(aoa) {
   state.mapping = autoMap(headers);
   state.results = data.map(newResult);
   state.filterCat = 'all';
+  state.filterZone = 'all';
   state.filterText = '';
   $('#filterText').value = '';
   $('#progressWrap').hidden = true;
@@ -1060,6 +1080,7 @@ function rowFields(i) {
     ciudad: get('ciudad'),
     direccion: get('direccion'),
     referencia: get('referencia'),
+    precio: get('precio'),
   };
 }
 
@@ -1933,12 +1954,18 @@ function rowHtml(i) {
   const wa = waLink(f.whatsapp);
   const place = placeText(f);
   const agPlace = a ? [a.distrito, a.provincia, a.departamento].filter(Boolean).join(', ') : '';
-  const copyBtn = a && (r.status === 'done' || r.status === 'error')
-    ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="Copia el mensaje de WhatsApp con esta agencia">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button></div>`
+  const lima = isLima(f);
+  const price = parsePrice(f.precio);
+  // En Lima y Callao el mensaje no depende de la agencia: se puede copiar desde el inicio
+  const copyBtn = lima || (a && (r.status === 'done' || r.status === 'error'))
+    ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="${lima ? 'Copia el mensaje de entrega por motorizado en Lima' : 'Copia el mensaje de WhatsApp con esta agencia'}">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button></div>`
     : '';
-  const agCell = a
-    ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}${a.categoria ? ` · ${esc(a.categoria)}` : ''}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}${copyBtn}`
-    : (r.status === 'done' || r.status === 'error' ? '<span class="sub">Sin agencia sugerida</span>' : '<span class="sub">—</span>');
+  const limaTag = lima
+    ? `<div><span class="tag tag-lima" title="Entrega por motorizado: el mensaje no menciona agencia Shalom">Lima · motorizado · ${price != null ? `S/ ${fmtPrice(price)}` : 'sin precio'}</span></div>`
+    : '';
+  const agCell = limaTag + (a
+    ? `<div class="ag-name">${esc(a.nombre)}</div><div class="sub">${esc(agPlace)}${a.categoria ? ` · ${esc(a.categoria)}` : ''}</div>${a.aproximada ? '<span class="tag" title="La fuente no publica coordenadas de esta agencia; se ubicó de forma aproximada.">ubicación aprox.</span>' : ''}`
+    : (r.status === 'done' || r.status === 'error' ? '<span class="sub">Sin agencia sugerida</span>' : (lima ? '' : '<span class="sub">—</span>'))) + copyBtn;
   const links = a
     ? `<div class="maplinks"><a href="${esc(mapsAgencyUrl(a))}" target="_blank" rel="noopener" title="Abrir la ficha de la agencia en Google Maps">Ver en Maps</a><a href="${SHALOM_AGENCIAS_URL}" target="_blank" rel="noopener" data-shalom="${i}" title="Abre shalom.com.pe/agencias y copia el distrito para pegarlo en su buscador">Ver en Shalom</a>${r.geo ? `<a href="${routeUrl(r.geo, a)}" target="_blank" rel="noopener" title="Cómo llegar desde la ubicación del cliente hasta la agencia">Ver ruta</a>` : ''}</div>`
     : '—';
@@ -1958,8 +1985,36 @@ function rowHtml(i) {
     <td data-label="Ver agencia">${links}</td>`;
 }
 
+// Lima y Callao se entregan por motorizado; el resto del país, por agencia Shalom
+const LIMA_PROVINCIAS = ['lima', 'lima metropolitana', 'callao', 'provincia constitucional del callao', 'prov const del callao'];
+function isLima(f) {
+  const prov = norm(f.provincia);
+  if (prov) return LIMA_PROVINCIAS.includes(prov);
+  return norm(f.departamento) === 'callao';
+}
+const isLimaRow = (i) => isLima(rowFields(i));
+
+// "S/ 99.9", "99,90", 99.9 → 99.9
+function parsePrice(v) {
+  let t = clean(v).replace(/s\s*\/\s*\.?|soles|pen/gi, '').replace(/\s/g, '');
+  if (!t) return null;
+  if (/,\d{1,2}$/.test(t) && !t.includes('.')) t = t.replace(',', '.');
+  const n = Number(t.replace(/,/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+const fmtPrice = (n) => n.toFixed(2);
+
+const ZONES = { all: 'Todos', lima: 'Lima y Callao', prov: 'Provincias' };
+function renderZoneFilter() {
+  const lima = state.rows.reduce((n, _, i) => n + (isLimaRow(i) ? 1 : 0), 0);
+  const counts = { all: state.rows.length, lima, prov: state.rows.length - lima };
+  $('#zoneFilter').innerHTML = Object.entries(ZONES).map(([k, label]) =>
+    `<button type="button" data-zone="${k}" aria-pressed="${state.filterZone === k}">${label}<small>${counts[k]}</small></button>`).join('');
+}
+
 function rowMatchesFilter(i) {
   const r = state.results[i];
+  if (state.filterZone !== 'all' && (isLimaRow(i) ? 'lima' : 'prov') !== state.filterZone) return false;
   if (state.filterCat !== 'all') {
     const cat = category(r);
     if ((cat === 'processing' ? 'pending' : cat) !== state.filterCat) return false;
@@ -2014,6 +2069,7 @@ function renderStats() {
   if (state.filterCat === 'pending' && !counts.pending) state.filterCat = 'all';
   const tiles = ['all', 'ok', 'mid', 'low', 'bad'];
   if (counts.pending) tiles.push('pending');
+  renderZoneFilter();
   $('#stats').innerHTML = tiles.map((k) => `
     <button type="button" class="stat ${k}" data-cat="${k}" aria-pressed="${state.filterCat === k}">
       <span class="n">${counts[k]}</span><span class="l">${k !== 'all' ? '<i></i>' : ''}${esc(CATS[k].label)}</span>
@@ -2178,6 +2234,7 @@ function editorPickAgency(id) {
    MENSAJE PARA WHATSAPP
    ============================================================ */
 const MSG_STORAGE = 'buscadorShalom.mensaje.v1';
+const MSG_STORAGE_LIMA = 'buscadorShalom.mensajeLima.v1';
 const DEFAULT_MESSAGE = [
   '¡Hola {nombre} 😊 Te saluda Fiorella de TodoClick.',
   '',
@@ -2191,9 +2248,42 @@ const DEFAULT_MESSAGE = [
   '¿Te queda bien para recoger tu pedido? 😊',
 ].join('\n');
 
-function messageTemplate() {
-  const t = $('#msgTemplate').value;
-  return t.trim() ? t : DEFAULT_MESSAGE;
+const DEFAULT_MESSAGE_LIMA = [
+  '¡Hola {nombre}! 😊 Te saluda Fiorella de TodoClick.',
+  '',
+  'Para Lima nuestros pedidos son 100% contra entrega. Mientras preparamos Tu Pedido confírmanos tu dirección por favor,',
+  '',
+  '📍 Dirección: {direccion_cliente}',
+  '📅 Entrega:  entre 3PM-7PM',
+  '💵 Pagas al recibir: S/. {precio}',
+  '',
+  'Me envías tu ubicación en tiempo actual para apoyar a nuestro motorizado😊',
+].join('\n');
+
+function messageTemplate(lima) {
+  const t = $(lima ? '#msgTemplateLima' : '#msgTemplate').value;
+  return t.trim() ? t : (lima ? DEFAULT_MESSAGE_LIMA : DEFAULT_MESSAGE);
+}
+
+function fillTemplate(template, values) {
+  return template
+    .replace(/\{([a-z_]+)\}/gi, (m, k) => (k.toLowerCase() in values ? values[k.toLowerCase()] || '' : m))
+    .replace(/[ \t]+\n/g, '\n')        // espacios sobrantes al final de cada línea
+    .replace(/¡Hola\s+😊/g, '¡Hola 😊')  // si no hay nombre
+    .replace(/¡Hola\s+!/g, '¡Hola!')
+    .trim();
+}
+
+function buildLimaMessage(i) {
+  const f = rowFields(i);
+  const price = parsePrice(f.precio);
+  return fillTemplate(messageTemplate(true), {
+    nombre: firstName(f.nombre),
+    direccion_cliente: dedupeJoin([f.direccion, f.distrito]),
+    referencia_cliente: f.referencia,
+    distrito_cliente: f.distrito,
+    precio: price != null ? fmtPrice(price) : '',
+  });
 }
 
 // "a 100 mtrs. de la piscina wanchaq" → "A 100 Mtrs. De La Piscina Wanchaq"
@@ -2207,6 +2297,7 @@ function firstName(full) {
 }
 
 function buildMessage(i) {
+  if (isLimaRow(i)) return buildLimaMessage(i);
   const r = state.results[i];
   const a = r && r.agency;
   if (!a) return '';
@@ -2221,11 +2312,7 @@ function buildMessage(i) {
     distrito: titleCase(a.distrito),
     detalle: referencia ? `REFERENCIA-  ${referencia}` : `DIRECCIÓN-  ${direccion}`,
   };
-  return messageTemplate()
-    .replace(/\{(nombre|agencia|referencia|direccion|distrito|detalle)\}/gi, (m, k) => values[k.toLowerCase()] || '')
-    .replace(/[ \t]+\n/g, '\n')        // espacios sobrantes al final de cada línea
-    .replace(/¡Hola\s+😊/g, '¡Hola 😊')  // si no hay nombre
-    .trim();
+  return fillTemplate(messageTemplate(false), values);
 }
 
 async function copyText(text) {
@@ -2251,7 +2338,12 @@ async function copyMessage(i) {
   if (await copyText(text)) {
     state.results[i].copied = true;
     updateRow(i);
-    toast(`Mensaje copiado para ${firstName(rowFields(i).nombre) || 'el cliente'}. Pégalo en WhatsApp.`, 'ok');
+    const f = rowFields(i);
+    if (isLima(f) && parsePrice(f.precio) == null) {
+      toast(`Mensaje copiado, pero ${firstName(f.nombre) || 'este cliente'} no tiene precio en la columna Precio: complétalo en WhatsApp.`, 'error');
+    } else {
+      toast(`Mensaje copiado para ${firstName(f.nombre) || 'el cliente'}. Pégalo en WhatsApp.`, 'ok');
+    }
   } else {
     toast('No se pudo copiar automáticamente. Revisa los permisos del navegador.', 'error');
   }
@@ -2280,6 +2372,7 @@ function exportExcel() {
       return row[h] ?? '';
     });
     const values = {
+      envio: isLima(f) ? 'Motorizado (Lima y Callao)' : 'Agencia Shalom',
       busqueda: r.searchText || buildSearchAddress(f),
       estado: r.status === 'error' ? 'Error' : ESTADO_EXPORT[cat],
       precision: g ? PREC[g.precision].label : (r.status === 'done' ? (a ? 'Por distrito' : 'No ubicada') : ''),
@@ -2332,7 +2425,7 @@ function downloadTemplate(ev) {
   ev.preventDefault();
   if (typeof XLSX === 'undefined') { toast('No se pudo cargar SheetJS. Revisa tu conexión.', 'error'); return; }
   // Mismo orden que el formulario de la tienda: primero el teléfono y luego el nombre
-  const labels = ['Número de teléfono', 'Nombre y apellidos', 'Departamento', 'Provincia', 'Distrito', 'Dirección', 'Referencia'];
+  const labels = ['Número de teléfono', 'Nombre y apellidos', 'Departamento', 'Provincia', 'Distrito', 'Dirección', 'Referencia', 'Producto', 'Precio'];
   const ws = XLSX.utils.aoa_to_sheet([labels]);
   ws['!cols'] = labels.map((l) => ({ wch: Math.max(18, l.length + 4) }));
   const wb = XLSX.utils.book_new();
@@ -2443,6 +2536,13 @@ function bindEvents() {
     renderStats();
     renderTable();
   });
+  $('#zoneFilter').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-zone]');
+    if (!b) return;
+    state.filterZone = b.dataset.zone;
+    renderZoneFilter();
+    renderTable();
+  });
   let filterTimer;
   $('#filterText').addEventListener('input', (e) => {
     clearTimeout(filterTimer);
@@ -2471,19 +2571,24 @@ function bindEvents() {
 }
 
 function init() {
-  let savedMsg = '';
-  try { savedMsg = localStorage.getItem(MSG_STORAGE) || ''; } catch { savedMsg = ''; }
-  $('#msgTemplate').value = savedMsg || DEFAULT_MESSAGE;
-  $('#msgTemplate').addEventListener('input', () => {
-    try {
-      if ($('#msgTemplate').value === DEFAULT_MESSAGE) localStorage.removeItem(MSG_STORAGE);
-      else localStorage.setItem(MSG_STORAGE, $('#msgTemplate').value);
-    } catch { /* sin almacenamiento: el cambio dura hasta recargar */ }
+  const templates = [['#msgTemplate', MSG_STORAGE, DEFAULT_MESSAGE], ['#msgTemplateLima', MSG_STORAGE_LIMA, DEFAULT_MESSAGE_LIMA]];
+  templates.forEach(([sel, key, def]) => {
+    let saved = '';
+    try { saved = localStorage.getItem(key) || ''; } catch { saved = ''; }
+    $(sel).value = saved || def;
+    $(sel).addEventListener('input', () => {
+      try {
+        if ($(sel).value === def) localStorage.removeItem(key);
+        else localStorage.setItem(key, $(sel).value);
+      } catch { /* sin almacenamiento: el cambio dura hasta recargar */ }
+    });
   });
   $('#msgReset').addEventListener('click', () => {
-    $('#msgTemplate').value = DEFAULT_MESSAGE;
-    try { localStorage.removeItem(MSG_STORAGE); } catch { /* sin almacenamiento */ }
-    toast('Se restauró el mensaje original.');
+    templates.forEach(([sel, key, def]) => {
+      $(sel).value = def;
+      try { localStorage.removeItem(key); } catch { /* sin almacenamiento */ }
+    });
+    toast('Se restauraron los mensajes originales.');
   });
   $('#deptList').innerHTML = DEPARTAMENTOS.map((d) => `<option value="${esc(d)}">`).join('');
   GeoCache.load();

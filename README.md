@@ -41,9 +41,13 @@ python generar_excel_prueba.py
 
 La app detecta las columnas por su nombre. El formato recomendado es el de Pedidos Shopify:
 
-`NÚMERO DE TELÉFONO · NOMBRE Y APELLIDOS · DEPARTAMENTO · PROVINCIA · DISTRITO · DIRECCIÓN · REFERENCIA`
+`NÚMERO DE TELÉFONO · NOMBRE Y APELLIDOS · DEPARTAMENTO · PROVINCIA · DISTRITO · DIRECCIÓN · REFERENCIA · PRODUCTO · PRECIO`
 
-Las demás columnas (producto, precio, etc.) se conservan en el Excel descargado. También se acepta el formato antiguo con una sola columna "Ciudad y/o Distrito".
+Las demás columnas se conservan en el Excel descargado. También se acepta el formato antiguo con una sola columna "Ciudad y/o Distrito".
+
+## Lima y Callao
+
+Los clientes de la provincia de Lima y de la provincia del Callao se entregan por motorizado. En los resultados puedes filtrar **Todos**, **Lima y Callao** o **Provincias**. El botón **Copiar mensaje** de un cliente de Lima o Callao arma el mensaje de motorizado con su dirección y el precio de la columna PRECIO. Los demás clientes reciben el mensaje con la agencia Shalom más cercana. Los dos mensajes se pueden editar en "Mensajes para WhatsApp". El Excel descargado incluye la columna "Tipo de Envío".
 
 ## Cómo busca la ubicación de cada cliente
 
