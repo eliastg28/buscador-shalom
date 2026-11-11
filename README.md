@@ -1,17 +1,36 @@
 # Buscador de Agencias Shalom
 
-Aplicación 100 % frontend que lee un Excel o CSV de clientes de todo el Perú y sugiere la agencia Shalom más cercana a cada uno.
+Aplicación 100 % frontend que lee los pedidos desde Google Sheets (en tiempo real) o desde un Excel o CSV y sugiere la agencia Shalom más cercana a cada cliente.
 
 ## Archivos
 
 | Archivo | Para qué sirve |
 |---|---|
 | `index.html` | La aplicación completa (HTML, CSS y JavaScript). |
-| `agencias_shalom.json` | Las 499 agencias que muestra shalom.com.pe/agencias, con dirección, referencia, categoría y coordenadas. |
+| `google_sheets_apps_script.gs` | Código para pegar en Apps Script de tu Google Sheets: conecta la hoja de pedidos con la app. |
+| `agencias_shalom.json` | Las 496 agencias que muestra shalom.com.pe/agencias, con dirección, referencia, categoría y coordenadas. |
 | `exportar_agencias_shalom.js` | Script para la consola del navegador que exporta las agencias visibles en shalom.com.pe/agencias. |
 | `actualizar_agencias.py` | Regenera `agencias_shalom.json` a partir del HTML guardado de shalom.com.pe/agencias. |
 | `generar_excel_prueba.py` | Genera `clientes_prueba_peru.xlsx` con 13 clientes de prueba (formato antiguo). |
 | `clientes_prueba_peru.xlsx` | Excel de prueba ya generado. |
+
+## Google Sheets
+
+La app puede leer los pedidos directamente de tu Google Sheets. Los pedidos nuevos aparecen solos (la hoja se revisa cada 30 segundos) y se procesan automáticamente, empezando por los más recientes. Cada pedido tiene un **Estado** (*Pendiente*, *En atención* o *Atendido*): lo cambias en la app y se guarda en la columna ESTADO de tu hoja. Los pedidos *Atendido* no se vuelven a procesar.
+
+Instalación, una sola vez:
+
+1. Abre tu Google Sheets de pedidos. Los títulos deben estar en la primera fila y los pedidos en la primera pestaña. Si están en otra pestaña, escribe su nombre en `HOJA_PEDIDOS` al inicio del código.
+2. Ve a **Extensiones → Apps Script**. Borra lo que haya, pega todo el contenido de `google_sheets_apps_script.gs` y guarda (Ctrl+S). Basta con tener acceso de **editor** a la hoja.
+   - Si tienes varias cuentas de Google abiertas, Apps Script puede mostrar "Sorry, unable to open the file at this time". Haz la instalación en una ventana de incógnito, entrando solo con la cuenta que tiene acceso a la hoja.
+   - Otra opción, sin agregar nada al archivo: entra a [script.google.com](https://script.google.com), crea un **Nuevo proyecto**, pega el código y escribe en `ID_HOJA` el ID de la hoja (la parte de su enlace entre `/d/` y `/edit`).
+3. En la barra de arriba elige la función **crearClave** y presiona **Ejecutar**. Google pedirá permisos: elige tu cuenta, luego **Configuración avanzada → Ir a (proyecto)** y **Permitir**. En el **Registro de ejecución** aparece tu clave: cópiala.
+4. Presiona **Implementar → Nueva implementación**. En el engranaje elige **Aplicación web**. Configura **Ejecutar como: Yo** y **Quién tiene acceso: Cualquier usuario**. Presiona **Implementar** y copia la **URL de la aplicación web** (termina en `/exec`).
+5. En la app, paso 2, elige **Google Sheets**, pega la URL y la clave y presiona **Conectar**. Con "Recordar" marcado, la app se conecta sola cada vez que la abras en ese navegador.
+
+La primera vez que la app lee la hoja, crea la columna **ESTADO** al final con una lista desplegable. Cada pedido nuevo que llega sin estado queda como *Pendiente* en la hoja la próxima vez que la app la revisa (cada 30 segundos mientras está abierta). También puedes cambiar el estado directamente en la hoja: la app lo verá en la siguiente revisión.
+
+Sobre la seguridad: la página de GitHub es pública, pero no guarda ningún pedido. Solo quien tenga la URL **y** la clave puede leer la hoja o cambiar estados. No compartas la clave; si se filtra, ejecuta otra vez `crearClave` y usa la nueva. Si cambias el código de Apps Script, publícalo otra vez en **Implementar → Gestionar implementaciones → Editar → Versión: Nueva versión**. Así la URL no cambia.
 
 ## Publicar en GitHub Pages
 

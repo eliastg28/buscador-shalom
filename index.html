@@ -220,6 +220,14 @@ th.num { text-align: right; }
 .zone-filter button small { font-weight: 400; color: var(--muted); margin-left: 4px; }
 .zone-filter button:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
 .msg-body .label { margin-top: 12px; }
+.source-tabs { margin-bottom: 14px; }
+#shStatus { margin-top: 12px; }
+.estado-sel { width: auto; padding: 5px 8px; font-size: 13px; font-weight: 650; border-radius: 8px; border-color: transparent; cursor: pointer; }
+.estado-sel.est-pendiente { background: var(--pending-bg); color: var(--pending); }
+.estado-sel.est-atencion { background: var(--mid-bg); color: var(--mid); }
+.estado-sel.est-atendido { background: var(--ok-bg); color: var(--ok); }
+.estado-sel option { background: var(--surface); color: var(--text); }
+.estado-sel:disabled { opacity: .65; cursor: progress; }
 .copy-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .btn-copy.copied { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
 .msg-box { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
@@ -288,7 +296,7 @@ footer.site p { margin: 4px 0; }
   table.results td.empty { display: block; }
   table.results td.empty::before { content: none; }
   .num { text-align: left; }
-  .maplinks { flex-direction: row; gap: 14px; }
+  .maplinks { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
 }
 @media (max-width: 600px) {
   .container { padding-left: 16px; padding-right: 16px; }
@@ -298,7 +306,8 @@ footer.site p { margin: 4px 0; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .segmented { grid-template-columns: 1fr; }
   .zone-filter { display: flex; width: 100%; }
-  .zone-filter button { flex: 1 1 0; padding: 8px 6px; }
+  .zone-filter button { flex: 1 1 0; padding: 7px 4px; font-size: 12.5px; white-space: normal; line-height: 1.25; }
+  .zone-filter button small { display: block; margin: 0; }
   .dlg-body { padding: 16px; }
 }
 </style>
@@ -353,12 +362,36 @@ footer.site p { margin: 4px 0; }
 
   <!-- Paso 2 -->
   <section class="card" aria-labelledby="t-file">
-    <div class="card-head"><span class="step">2</span><h2 id="t-file">Archivo de clientes</h2></div>
+    <div class="card-head"><span class="step">2</span><h2 id="t-file">Pedidos</h2></div>
+    <div class="segmented source-tabs" role="radiogroup" aria-label="Origen de los pedidos">
+      <label><input type="radio" name="source" value="sheet"><span>Google Sheets<small>Pedidos en tiempo real</small></span></label>
+      <label><input type="radio" name="source" value="file" checked><span>Archivo Excel o CSV<small>Subir un archivo</small></span></label>
+    </div>
+    <div id="sheetBox" class="block" hidden>
+      <label class="label" for="shUrl" style="margin-top:0">URL de la aplicación web de Apps Script</label>
+      <input id="shUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+      <label class="label" for="shKey">Clave</label>
+      <div class="input-row">
+        <input id="shKey" type="password" autocomplete="off" spellcheck="false" placeholder="La clave que te dio crearClave">
+        <button type="button" class="btn btn-ghost btn-sm" id="shKeyToggle">Mostrar</button>
+      </div>
+      <label class="check"><input type="checkbox" id="shRemember" checked> Recordar en este navegador y conectar al abrir</label>
+      <div class="row-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="shConnect">Conectar</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="shRefresh" hidden>Actualizar ahora</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="shDisconnect" hidden>Desconectar</button>
+      </div>
+      <div id="shStatus" class="status-line" hidden><span class="dot"></span><span class="txt"></span></div>
+      <p class="hint">Los pedidos nuevos aparecen solos (se revisa la hoja cada 30 segundos) y el estado que elijas se guarda en la columna ESTADO de tu hoja.
+        La primera vez sigue la guía <a href="https://github.com/eliastg28/buscador-shalom#google-sheets" target="_blank" rel="noopener">Conectar Google Sheets</a>.</p>
+    </div>
+    <div id="fileBox">
     <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Seleccionar archivo Excel o CSV">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/></svg>
       <p class="dz-title">Arrastra tu archivo aquí o <span class="link">selecciónalo</span></p>
       <p class="dz-sub">Excel (.xlsx, .xls) o CSV con las columnas: Número de teléfono · Nombre y apellidos · Departamento · Provincia · Distrito · Dirección · Referencia</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt,text/csv" hidden>
+    </div>
     </div>
     <div id="fileInfo" class="file-info" hidden>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
@@ -367,7 +400,7 @@ footer.site p { margin: 4px 0; }
       <label id="sheetWrap" hidden><span class="sr-only">Hoja</span><select id="sheetSelect"></select></label>
       <button type="button" class="btn btn-ghost btn-sm" id="btnRemoveFile">Quitar</button>
     </div>
-    <p class="hint">¿No tienes el formato? <a href="#" id="dlTemplate">Descarga la plantilla vacía</a>.</p>
+    <p class="hint" id="templateHint">¿No tienes el formato? <a href="#" id="dlTemplate">Descarga la plantilla vacía</a>.</p>
   </section>
 
   <!-- Paso 3 -->
@@ -416,6 +449,7 @@ footer.site p { margin: 4px 0; }
     </details>
     <div class="stats" id="stats"></div>
     <div class="toolbar">
+      <div class="zone-filter" id="estadoFilter" role="group" aria-label="Filtrar por estado del pedido" hidden></div>
       <div class="zone-filter" id="zoneFilter" role="group" aria-label="Filtrar por zona de entrega"></div>
       <input type="search" id="filterText" placeholder="Filtrar por cliente, distrito o agencia…" aria-label="Filtrar resultados">
       <span class="count" id="filterCount"></span>
@@ -426,6 +460,7 @@ footer.site p { margin: 4px 0; }
           <tr>
             <th>#</th>
             <th>Cliente</th>
+            <th id="thEstado" hidden>Estado</th>
             <th>WhatsApp</th>
             <th>Dirección</th>
             <th>Agencia Shalom Sugerida</th>
@@ -541,7 +576,7 @@ function activeFields() {
 const OUT_COLS = {
   envio: 'Tipo de Envío',
   busqueda: 'Dirección de Búsqueda',
-  estado: 'Estado',
+  estado: 'Resultado de Búsqueda',
   precision: 'Precisión Ubicación Cliente',
   lat: 'Latitud Cliente',
   lng: 'Longitud Cliente',
@@ -575,7 +610,7 @@ const CATS = {
   mid:     { label: 'Aproximados' },
   low:     { label: 'Por revisar' },
   bad:     { label: 'No ubicados' },
-  pending: { label: 'Pendientes' },
+  pending: { label: 'Sin procesar' },
 };
 const ESTADO_EXPORT = { ok: 'Ubicado', mid: 'Aproximado', low: 'Revisar', bad: 'No ubicado', pending: 'Pendiente', processing: 'Pendiente' };
 
@@ -783,6 +818,7 @@ const state = {
   provider: 'nominatim',
   filterCat: 'all',
   filterZone: 'all',
+  filterEstado: 'all',
   filterText: '',
   editIndex: -1,
 };
@@ -884,6 +920,7 @@ function applyAgencias(parsed, source) {
   // Si ya había resultados, se recalculan con la nueva base
   state.results.forEach((r) => { if (r.status === 'done') r.status = 'pending'; });
   if (state.rows.length) { renderTable(); renderStats(); updateProcessButton(); }
+  autoProcess();
 }
 
 function setAgStatus(kind, html) {
@@ -940,7 +977,7 @@ function decodeText(buffer) {
 
 async function handleFile(file) {
   if (!file) return;
-  if (state.processing) { toast('Espera a que termine el proceso actual o detenlo.', 'error'); return; }
+  if (!(await stopAutoRun())) { toast('Espera a que termine el proceso actual o detenlo.', 'error'); return; }
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   try {
     if (typeof XLSX === 'undefined' || typeof Papa === 'undefined') throw new Error('No se pudieron cargar las librerías de lectura (SheetJS / PapaParse). Revisa tu conexión y recarga la página.');
@@ -1014,8 +1051,10 @@ function setTable(aoa) {
   state.rows = data;
   state.mapping = autoMap(headers);
   state.results = data.map(newResult);
+  stopSheetSync();
   state.filterCat = 'all';
   state.filterZone = 'all';
+  state.filterEstado = 'all';
   state.filterText = '';
   $('#filterText').value = '';
   $('#progressWrap').hidden = true;
@@ -1790,11 +1829,16 @@ async function prepareProvider() {
   if (state.provider === 'google') await GoogleGeo.ensure($('#gKey').value.trim());
 }
 
-async function processAll() {
+// opts.auto: pedidos nuevos de Google Sheets. Se procesan primero los más recientes y se omiten los "Atendido".
+async function processAll(opts = {}) {
   if (state.processing) return;
-  if (!state.agencias.length) { toast('Primero carga la base de agencias (paso 1).', 'error'); return; }
-  if (!state.mapping.direccion) { toast('Asigna la columna "Dirección Completa".', 'error'); return; }
+  if (!state.agencias.length) { if (!opts.auto) toast('Primero carga la base de agencias (paso 1).', 'error'); return; }
+  if (!state.mapping.direccion) { if (!opts.auto) toast('Asigna la columna "Dirección Completa".', 'error'); return; }
   let queue = state.results.map((r, i) => i).filter((i) => state.results[i].status !== 'done');
+  if (opts.auto) {
+    queue = queue.filter((i) => estadoOf(i) !== 'Atendido').reverse();
+    if (!queue.length) return;
+  }
   if (!queue.length) {
     state.results.forEach((r) => { r.status = 'pending'; });
     queue = state.results.map((r, i) => i);
@@ -1802,6 +1846,7 @@ async function processAll() {
   }
   hideFatal();
   state.processing = true;
+  state.autoRun = !!opts.auto;
   state.abort = new AbortController();
   setProcessingUi(true);
   const t0 = Date.now();
@@ -1846,9 +1891,253 @@ async function processAll() {
     updateProcessButton();
     const pending = state.results.filter((r) => r.status !== 'done').length;
     updateProgress(done, queue.length, '', t0, true);
-    if (stopped) toast(`Proceso detenido. ${pending} clientes pendientes.`);
-    else if (!pending) toast('¡Listo! Ya puedes descargar el Excel.', 'ok');
+    if (stopped && !opts.auto) toast(`Proceso detenido. ${pending} clientes pendientes.`);
+    else if (!pending && !opts.auto) toast('¡Listo! Ya puedes descargar el Excel.', 'ok');
+    // Revisa si llegaron pedidos mientras se procesaba
+    if (Sheet.active && !stopped) setTimeout(() => refreshSheet(), 300);
   }
+}
+
+// Detiene el proceso automático (no el manual). Devuelve true si ya no hay nada procesándose.
+async function stopAutoRun() {
+  if (!state.processing) return true;
+  if (!state.autoRun) return false;
+  state.abort.abort();
+  for (let k = 0; k < 100 && state.processing; k++) await new Promise((res) => setTimeout(res, 50));
+  return !state.processing;
+}
+
+function autoProcess() {
+  if (!Sheet.active || state.processing) return;
+  if (state.results.some((r, i) => r.status === 'pending' && estadoOf(i) !== 'Atendido')) processAll({ auto: true });
+}
+
+/* ============================================================
+   GOOGLE SHEETS (Apps Script: google_sheets_apps_script.gs)
+   ============================================================ */
+const SHEET_STORAGE = 'buscadorShalom.sheets.v1';
+const SHEET_POLL_MS = 30000;
+const ESTADOS = ['Pendiente', 'En atención', 'Atendido'];
+const ESTADO_CLASS = { 'Pendiente': 'est-pendiente', 'En atención': 'est-atencion', 'Atendido': 'est-atendido' };
+
+const Sheet = { active: false, url: '', clave: '', timer: null, loading: false, saving: 0, sig: '', estadoCol: '', lastOk: 0 };
+
+function normEstado(v) {
+  const n = norm(v);
+  if (!n) return 'Pendiente';
+  return ESTADOS.find((e) => norm(e) === n) || clean(v);
+}
+
+function estadoOf(i) {
+  if (!Sheet.active) return '';
+  const r = state.results[i];
+  return r.estadoSaving || normEstado(state.rows[i][Sheet.estadoCol]);
+}
+
+async function sheetRequest(payload) {
+  let resp;
+  try {
+    resp = payload
+      ? await fetch(Sheet.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...payload, clave: Sheet.clave }) })
+      : await fetch(`${Sheet.url}${Sheet.url.includes('?') ? '&' : '?'}accion=leer&clave=${encodeURIComponent(Sheet.clave)}&t=${Date.now()}`, { cache: 'no-store' });
+  } catch {
+    throw new Error('No se pudo conectar con Google Sheets. Revisa tu internet, que la URL sea la de la aplicación web (termina en /exec) y que su acceso sea "Cualquier usuario".');
+  }
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch {
+    throw new Error('Google no devolvió los pedidos. Revisa que la aplicación web esté implementada con acceso "Cualquier usuario".');
+  }
+  if (!data.ok) throw new Error(data.error || 'Google Sheets devolvió un error.');
+  return data;
+}
+
+function setSheetStatus(kind, html) {
+  const el = $('#shStatus');
+  el.hidden = !kind;
+  el.className = `status-line ${kind || ''}`;
+  el.querySelector('.txt').innerHTML = html || '';
+}
+
+function updateSheetButtons() {
+  $('#shRefresh').hidden = !Sheet.active;
+  $('#shDisconnect').hidden = !Sheet.active;
+  $('#shConnect').textContent = Sheet.active ? 'Reconectar' : 'Conectar';
+}
+
+function saveSheetSettings() {
+  if ($('#shRemember').checked) store.set(SHEET_STORAGE, { url: $('#shUrl').value.trim(), clave: $('#shKey').value.trim() });
+  else store.del(SHEET_STORAGE);
+}
+
+function scheduleSheet() {
+  clearTimeout(Sheet.timer);
+  if (Sheet.active) Sheet.timer = setTimeout(() => refreshSheet(), SHEET_POLL_MS);
+}
+
+// Deja de leer la hoja (al subir un archivo, quitar o desconectar)
+function stopSheetSync() {
+  clearTimeout(Sheet.timer);
+  if (!Sheet.active) return;
+  Sheet.active = false;
+  Sheet.sig = '';
+  updateSheetButtons();
+  setSheetStatus('', '');
+}
+
+async function connectSheet() {
+  const url = $('#shUrl').value.trim();
+  const clave = $('#shKey').value.trim();
+  if (!/^https?:\/\/\S+$/i.test(url)) { toast('Pega la URL de la aplicación web de Apps Script (termina en /exec).', 'error'); return; }
+  if (!clave) { toast('Pega la clave que te dio la función crearClave.', 'error'); return; }
+  if (!(await stopAutoRun())) { toast('Espera a que termine el proceso actual o detenlo.', 'error'); return; }
+  clearTimeout(Sheet.timer);
+  Sheet.url = url;
+  Sheet.clave = clave;
+  Sheet.sig = '';
+  saveSheetSettings();
+  setSheetStatus('loading', 'Conectando con Google Sheets…');
+  $('#shConnect').disabled = true;
+  try {
+    if (await refreshSheet(true)) toast(`Conectado: ${state.rows.length} pedidos.`, 'ok');
+  } finally {
+    $('#shConnect').disabled = false;
+  }
+}
+
+async function refreshSheet(first = false) {
+  if (Sheet.loading) return false;
+  if (!first && !Sheet.active) return false;
+  // No se cambia la tabla mientras se procesa, se guarda un estado o se corrige una fila
+  const busy = state.processing || Sheet.saving || state.editIndex >= 0
+    || (document.activeElement && document.activeElement.matches('.estado-sel'));
+  if (!first && busy) { scheduleSheet(); return false; }
+  Sheet.loading = true;
+  try {
+    const data = await sheetRequest();
+    if (!first && !Sheet.active) return false;
+    applySheetData(data, first);
+    Sheet.lastOk = Date.now();
+    setSheetStatus('ok', `Conectado a <b>${esc(data.libro || 'Google Sheets')}</b>${data.hoja ? ` · hoja «${esc(data.hoja)}»` : ''} · ${state.rows.length} pedidos · actualizado a las ${new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+    return true;
+  } catch (err) {
+    setSheetStatus('error', esc(err.message));
+    if (first) toast(err.message, 'error');
+    return false;
+  } finally {
+    Sheet.loading = false;
+    scheduleSheet();
+  }
+}
+
+function applySheetData(data, first) {
+  const seen = {};
+  const headers = (data.encabezados || []).map((h, c) => {
+    let x = clean(h) || `Columna ${c + 1}`;
+    if (seen[x]) { seen[x] += 1; x = `${x} (${seen[x]})`; } else { seen[x] = 1; }
+    return x;
+  });
+  const filas = data.filas || [];
+  const sig = JSON.stringify([headers, filas]);
+  if (!first && Sheet.active && sig === Sheet.sig) return;   // sin cambios
+  Sheet.sig = sig;
+  const estadoCol = headers[data.columnaEstado] || '';
+  const rows = filas.map((f) => Object.fromEntries(headers.map((h, k) => [h, f.valores[k] == null ? '' : String(f.valores[k]).trim()])));
+
+  // Se conservan los resultados de los pedidos que ya estaban (aunque cambien de fila o de estado)
+  const keep = Sheet.active && headers.join('\u0001') === state.headers.join('\u0001');
+  const keyOf = (row) => headers.filter((h) => h !== estadoCol).map((h) => row[h]).join('\u0001');
+  const pool = new Map();
+  if (keep) {
+    state.rows.forEach((row, i) => {
+      const k = keyOf(row);
+      if (!pool.has(k)) pool.set(k, []);
+      pool.get(k).push(state.results[i]);
+    });
+  }
+  let added = 0;
+  const results = rows.map((row, k) => {
+    const list = pool.get(keyOf(row));
+    let r = list && list.length ? list.shift() : null;
+    if (!r) { r = newResult(); added++; }
+    r.fila = filas[k].fila;
+    return r;
+  });
+
+  Sheet.active = true;
+  Sheet.estadoCol = estadoCol;
+  state.fileName = `Google Sheets · ${data.libro || 'pedidos'}`;
+  state.workbook = null;
+  state.sheetName = data.hoja || '';
+  state.headers = headers;
+  state.rows = rows;
+  state.results = results;
+  if (!keep) {
+    state.mapping = autoMap(headers);
+    state.filterCat = 'all';
+    state.filterZone = 'all';
+    state.filterEstado = 'all';
+    state.filterText = '';
+    $('#filterText').value = '';
+    hideFatal();
+    renderMapping();
+  }
+  updateSheetButtons();
+  renderFileInfo();
+  renderTable();
+  renderStats();
+  updateProcessButton();
+  $('#cardMap').hidden = false;
+  $('#cardResults').hidden = false;
+  if (keep && added) toast(added === 1 ? 'Llegó 1 pedido nuevo.' : `Llegaron ${added} pedidos nuevos.`, 'ok');
+  autoProcess();
+}
+
+async function saveEstado(i, estado) {
+  const r = state.results[i];
+  if (!Sheet.active || r.estadoSaving) return;
+  const row = state.rows[i];
+  const huella = {};   // la hoja comprueba que la fila siga siendo este pedido
+  ['whatsapp', 'nombre'].forEach((k) => {
+    const h = state.mapping[k];
+    if (h && h !== Sheet.estadoCol) huella[h] = row[h] ?? '';
+  });
+  r.estadoSaving = estado;
+  Sheet.saving++;
+  updateRow(i);
+  renderEstadoFilter();
+  try {
+    const res = await sheetRequest({ accion: 'estado', fila: r.fila, estado, huella });
+    row[Sheet.estadoCol] = res.estado;
+    r.fila = res.fila;
+    toast(`${firstName(rowFields(i).nombre) || 'Pedido'}: «${res.estado}» guardado en Google Sheets.`, 'ok');
+  } catch (err) {
+    toast(`No se guardó el estado: ${err.message}`, 'error');
+  } finally {
+    r.estadoSaving = null;
+    Sheet.saving--;
+    const k = state.results.indexOf(r);
+    if (k >= 0) updateRow(k);
+    renderEstadoFilter();
+  }
+}
+
+function estadoSelectHtml(i) {
+  const r = state.results[i];
+  const est = estadoOf(i);
+  const opts = ESTADOS.includes(est) ? ESTADOS : [...ESTADOS, est];
+  return `<select class="estado-sel ${ESTADO_CLASS[est] || ''}" data-estado="${i}" aria-label="Estado del pedido"${r.estadoSaving ? ' disabled' : ''}>${opts.map((o) => `<option${o === est ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>${r.estadoSaving ? '<div class="sub">Guardando…</div>' : ''}`;
+}
+
+function renderEstadoFilter() {
+  const el = $('#estadoFilter');
+  el.hidden = !Sheet.active;
+  if (!Sheet.active) return;
+  const counts = { all: state.rows.length };
+  ESTADOS.forEach((e) => { counts[e] = 0; });
+  state.rows.forEach((_, i) => { const e = estadoOf(i); if (e in counts) counts[e] += 1; });
+  el.innerHTML = [['all', 'Todos'], ...ESTADOS.map((e) => [e, e])].map(([k, label]) =>
+    `<button type="button" data-estado-filter="${esc(k)}" aria-pressed="${state.filterEstado === k}">${esc(label)}<small>${counts[k]}</small></button>`).join('');
 }
 
 /* ============================================================
@@ -1916,7 +2205,7 @@ function setProcessingUi(on) {
   $('#btnStop').hidden = !on;
   $('#progressWrap').hidden = false;
   $('#progressWrap').classList.toggle('running', on);
-  document.querySelectorAll('#mapGrid select, #sheetSelect, input[name=provider], #gKey, #fileInput, #agFile, #btnRemoveFile').forEach((el) => { el.disabled = on; });
+  document.querySelectorAll('#mapGrid select, #sheetSelect, input[name=provider], #gKey, #fileInput, #agFile, #btnRemoveFile, #shConnect, #shDisconnect').forEach((el) => { el.disabled = on; });
   document.querySelectorAll('[data-edit]').forEach((b) => { b.disabled = on; });
   if (on) $('#estimate').textContent = '';
 }
@@ -1972,6 +2261,7 @@ function rowHtml(i) {
   return `
     <td class="c-idx" data-label="#">${i + 1}</td>
     <td class="col-client" data-label="Cliente"><strong>${esc(f.nombre || '(sin nombre)')}</strong></td>
+    ${Sheet.active ? `<td class="col-estado" data-label="Estado">${estadoSelectHtml(i)}</td>` : ''}
     <td class="col-wa" data-label="WhatsApp">${wa ? `<a href="${wa}" target="_blank" rel="noopener">${esc(f.whatsapp)}</a>` : esc(f.whatsapp || '—')}</td>
     <td class="col-addr" data-label="Dirección" title="Búsqueda: ${esc(r.searchText || buildSearchAddress(f))}">
       <div>${esc(f.direccion || '—')}</div>
@@ -2015,6 +2305,7 @@ function renderZoneFilter() {
 function rowMatchesFilter(i) {
   const r = state.results[i];
   if (state.filterZone !== 'all' && (isLimaRow(i) ? 'lima' : 'prov') !== state.filterZone) return false;
+  if (Sheet.active && state.filterEstado !== 'all' && estadoOf(i) !== state.filterEstado) return false;
   if (state.filterCat !== 'all') {
     const cat = category(r);
     if ((cat === 'processing' ? 'pending' : cat) !== state.filterCat) return false;
@@ -2028,6 +2319,7 @@ function rowMatchesFilter(i) {
 }
 
 function renderTable() {
+  $('#thEstado').hidden = !Sheet.active;
   const tbody = $('#tbody');
   tbody.innerHTML = state.rows.map((_, i) => `<tr data-i="${i}" class="cat-${category(state.results[i])}"${rowMatchesFilter(i) ? '' : ' hidden'}>${rowHtml(i)}</tr>`).join('');
   updateFilterCount();
@@ -2054,7 +2346,7 @@ function updateFilterCount() {
   $('#filterCount').textContent = visible === total ? `${total} filas` : `${visible} de ${total} filas`;
   const empty = $('#tbody .empty-row');
   if (!visible && total) {
-    if (!empty) $('#tbody').insertAdjacentHTML('beforeend', '<tr class="empty-row"><td colspan="9" class="empty">No hay filas con este filtro.</td></tr>');
+    if (!empty) $('#tbody').insertAdjacentHTML('beforeend', '<tr class="empty-row"><td colspan="${Sheet.active ? 10 : 9}" class="empty">No hay filas con este filtro.</td></tr>');
   } else if (empty) {
     empty.remove();
   }
@@ -2070,6 +2362,7 @@ function renderStats() {
   const tiles = ['all', 'ok', 'mid', 'low', 'bad'];
   if (counts.pending) tiles.push('pending');
   renderZoneFilter();
+  renderEstadoFilter();
   $('#stats').innerHTML = tiles.map((k) => `
     <button type="button" class="stat ${k}" data-cat="${k}" aria-pressed="${state.filterCat === k}">
       <span class="n">${counts[k]}</span><span class="l">${k !== 'all' ? '<i></i>' : ''}${esc(CATS[k].label)}</span>
@@ -2415,7 +2708,7 @@ function exportExcel() {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Clientes con agencia');
-  const base = (state.fileName || 'clientes').replace(/\.[^.]+$/, '');
+  const base = Sheet.active ? 'pedidos_google_sheets' : (state.fileName || 'clientes').replace(/\.[^.]+$/, '');
   XLSX.writeFile(wb, `${base}_agencias_shalom.xlsx`, { compression: true });
   const pending = state.results.filter((r) => r.status !== 'done').length;
   toast(pending ? `Excel descargado (${pending} filas aún pendientes).` : 'Excel descargado.', 'ok');
@@ -2444,6 +2737,7 @@ function saveSettings() {
 
 function resetAll() {
   if (state.processing) return;
+  stopSheetSync();
   state.fileName = '';
   state.workbook = null;
   state.sheetName = '';
@@ -2536,6 +2830,37 @@ function bindEvents() {
     renderStats();
     renderTable();
   });
+  $('#estadoFilter').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-estado-filter]');
+    if (!b) return;
+    state.filterEstado = b.dataset.estadoFilter;
+    renderEstadoFilter();
+    renderTable();
+  });
+  $('#tbody').addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-estado]');
+    if (sel) saveEstado(Number(sel.dataset.estado), sel.value);
+  });
+  document.querySelectorAll('input[name=source]').forEach((el) => el.addEventListener('change', () => showSource(el.value)));
+  $('#shConnect').addEventListener('click', connectSheet);
+  $('#shRefresh').addEventListener('click', () => {
+    if (state.processing) { toast('Se actualizará al terminar de procesar los pedidos.'); return; }
+    refreshSheet();
+  });
+  $('#shDisconnect').addEventListener('click', async () => {
+    if (!(await stopAutoRun())) { toast('Detén el proceso antes de desconectar.', 'error'); return; }
+    resetAll();
+    toast('Google Sheets desconectado.');
+  });
+  $('#shKeyToggle').addEventListener('click', () => {
+    const k = $('#shKey');
+    k.type = k.type === 'password' ? 'text' : 'password';
+    $('#shKeyToggle').textContent = k.type === 'password' ? 'Mostrar' : 'Ocultar';
+  });
+  $('#shRemember').addEventListener('change', saveSheetSettings);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Sheet.active && Date.now() - Sheet.lastOk > 10000) refreshSheet();
+  });
   $('#zoneFilter').addEventListener('click', (e) => {
     const b = e.target.closest('[data-zone]');
     if (!b) return;
@@ -2566,8 +2891,16 @@ function bindEvents() {
   $('#eAgencies').addEventListener('change', (e) => { if (e.target.name === 'eAgency') editorPickAgency(e.target.value); });
 
   window.addEventListener('beforeunload', (e) => {
-    if (state.processing) { e.preventDefault(); e.returnValue = ''; }
+    // Solo avisa en el proceso manual: el automático de Google Sheets se retoma al volver a abrir
+    if (state.processing && !state.autoRun) { e.preventDefault(); e.returnValue = ''; }
   });
+}
+
+function showSource(src) {
+  document.querySelector(`input[name=source][value=${src}]`).checked = true;
+  $('#sheetBox').hidden = src !== 'sheet';
+  $('#fileBox').hidden = src !== 'file';
+  $('#templateHint').hidden = src !== 'file';
 }
 
 function init() {
@@ -2600,13 +2933,20 @@ function init() {
   bindEvents();
   updateProviderUi();
   loadAgenciasFromUrl();
+  const sheetCfg = store.get(SHEET_STORAGE, null);
+  if (sheetCfg && sheetCfg.url && sheetCfg.clave) {
+    $('#shUrl').value = sheetCfg.url;
+    $('#shKey').value = sheetCfg.clave;
+    showSource('sheet');
+    connectSheet();
+  }
   if (typeof XLSX === 'undefined' || typeof Papa === 'undefined') {
     toast('No se pudieron cargar las librerías para leer Excel/CSV. Revisa tu conexión y recarga.', 'error');
   }
 }
 
 // Acceso para pruebas desde la consola del navegador
-window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber, buildMessage };
+window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber, buildMessage, Sheet, estadoOf };
 
 init();
 })();
