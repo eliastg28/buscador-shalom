@@ -36,6 +36,7 @@
   --st-verde: #0b7a43;   --st-verde-bg: #cdf2dc;
   --st-celeste: #0369a1; --st-celeste-bg: #dbf0fd;
   --st-morado: #742284;  --st-morado-bg: #f2e3f6;
+  --wa: #0a7a3e;         --wa-bg: #d9f7e4;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 6px 20px rgba(16, 24, 40, .06);
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -65,6 +66,7 @@
     --st-verde: #4ade94;   --st-verde-bg: rgba(52, 211, 130, .18);
     --st-celeste: #6cc9ff; --st-celeste-bg: rgba(92, 190, 255, .17);
     --st-morado: #d197f0;  --st-morado-bg: rgba(190, 120, 235, .19);
+    --wa: #4fe08a;         --wa-bg: rgba(37, 211, 102, .16);
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
   }
 }
@@ -266,6 +268,9 @@ th.num { text-align: right; }
 .estado-sel:disabled { opacity: .65; cursor: progress; }
 .copy-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .btn-copy.copied { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.btn-wa { background: var(--wa-bg); color: var(--wa); }
+.btn-wa:hover:not(:disabled) { border-color: var(--wa); }
+.btn-wa svg { flex: none; }
 .msg-box { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .msg-box summary { cursor: pointer; padding: 12px 14px; font-weight: 600; font-size: 14px; list-style: none; display: flex; align-items: center; gap: 8px; }
 .msg-box summary::-webkit-details-marker { display: none; }
@@ -829,10 +834,22 @@ function openInShalom(i) {
 function routeUrl(g, a) {
   return `https://www.google.com/maps/dir/?api=1&origin=${round(g.lat, 6)},${round(g.lng, 6)}&destination=${a.lat},${a.lng}`;
 }
-function waLink(v) {
+// Celular peruano en formato internacional (51 + 9 dígitos) o null
+function waNumber(v) {
   let d = String(v || '').replace(/\D/g, '');
   if (d.length === 9 && d[0] === '9') d = '51' + d;
-  return d.length === 11 && d.startsWith('519') ? `https://wa.me/${d}` : null;
+  return d.length === 11 && d.startsWith('519') ? d : null;
+}
+function waLink(v) {
+  const d = waNumber(v);
+  return d ? `https://wa.me/${d}` : null;
+}
+
+// Abre el chat con el mensaje ya escrito: WhatsApp Web en la computadora, la app en el celular
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function waSendUrl(num, text) {
+  const t = encodeURIComponent(text);
+  return IS_MOBILE ? `https://wa.me/${num}?text=${t}` : `https://web.whatsapp.com/send?phone=${num}&text=${t}`;
 }
 function formatDuration(sec) {
   if (!isFinite(sec) || sec <= 0) return '';
@@ -2152,6 +2169,7 @@ async function saveEstado(i, estado) {
   });
   r.estadoSaving = estado;
   r.copied = false;   // el mensaje cambia con el estado
+  r.sent = false;
   Sheet.saving++;
   updateRow(i);
   renderEstadoFilter();
@@ -2301,7 +2319,7 @@ function rowHtml(i) {
   const msgTitle = !msg ? '' : msg.kind === 'lima' ? 'Copia el mensaje de entrega por motorizado en Lima'
     : msg.kind === 'agencia' ? 'Copia el mensaje de WhatsApp con esta agencia' : `Copia el mensaje del estado «${msg.estado}»`;
   const copyBtn = msg
-    ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="${esc(msgTitle)}">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button></div>`
+    ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="${esc(msgTitle)}">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button>${waNumber(f.whatsapp) ? `<button type="button" class="btn btn-wa btn-sm" data-send="${i}" title="Abre el chat de este cliente en WhatsApp con el mensaje ya escrito"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>${r.sent ? 'Abierto ✓' : 'Enviar a WhatsApp'}</button>` : ''}</div>`
     : '';
   const limaTag = lima
     ? `<div><span class="tag tag-lima" title="Entrega por motorizado: el mensaje no menciona agencia Shalom">Lima · motorizado · ${price != null ? `S/ ${fmtPrice(price)}` : 'sin precio'}</span></div>`
@@ -2763,6 +2781,20 @@ async function copyText(text) {
   return ok;
 }
 
+function sendWhatsApp(i) {
+  const msg = messageFor(i);
+  const f = rowFields(i);
+  const num = waNumber(f.whatsapp);
+  if (!msg || !num) { toast('Este pedido no tiene mensaje o número de WhatsApp válido.', 'error'); return; }
+  // Siempre la misma pestaña, para no abrir una nueva por cada cliente
+  const w = window.open(waSendUrl(num, msg.text), 'whatsapp-buscador-shalom');
+  if (!w) { toast('El navegador bloqueó la ventana. Permite las ventanas emergentes para esta página.', 'error'); return; }
+  state.results[i].sent = true;
+  updateRow(i);
+  const sinPrecio = msg.kind === 'lima' && parsePrice(f.precio) == null ? ' Falta el precio: complétalo antes de enviar.' : '';
+  toast(`Se abrió WhatsApp con el mensaje para ${firstName(f.nombre) || 'el cliente'}. Revísalo y presiona Enter para enviarlo.${sinPrecio}`, sinPrecio ? 'error' : 'ok');
+}
+
 async function copyMessage(i) {
   const msg = messageFor(i);
   if (!msg) { toast('Este pedido no tiene mensaje para copiar en su estado actual.', 'error'); return; }
@@ -3017,6 +3049,8 @@ function bindEvents() {
     if (sh) { openInShalom(Number(sh.dataset.shalom)); return; }   // el enlace sigue abriendo la página
     const c = e.target.closest('[data-copy]');
     if (c) { copyMessage(Number(c.dataset.copy)); return; }
+    const w = e.target.closest('[data-send]');
+    if (w) { sendWhatsApp(Number(w.dataset.send)); return; }
     const b = e.target.closest('[data-edit]');
     if (b && !state.processing) openEditor(Number(b.dataset.edit));
   });
@@ -3107,7 +3141,7 @@ function init() {
 }
 
 // Acceso para pruebas desde la consola del navegador
-window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber, buildMessage, messageFor, Sheet, estadoOf };
+window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber, buildMessage, messageFor, waSendUrl, Sheet, estadoOf };
 
 init();
 })();
