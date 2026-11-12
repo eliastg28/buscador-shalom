@@ -31,7 +31,9 @@ const ID_HOJA = '';
 const HOJA_PEDIDOS = '';
 // Título de la columna de estado (se crea si no existe)
 const TITULO_ESTADO = 'ESTADO';
-const ESTADOS = ['Pendiente', 'En atención', 'Atendido'];
+// Estados por defecto. La app envía su propia lista, así que si cambias los estados en la app no hace
+// falta tocar este código: la lista desplegable de la hoja se actualiza sola.
+const ESTADOS = ['Pendiente', 'En atención', 'Sin respuesta', 'Seguimiento', 'Confirmado', 'Enviado', 'PAGADO'];
 
 /** Ejecuta esta función una vez desde el editor para crear (o cambiar) la clave de acceso. */
 function crearClave() {
@@ -50,8 +52,9 @@ function probarConexion() {
 
 function doGet(e) {
   return responder(function () {
-    verificarClave(e && e.parameter && e.parameter.clave);
-    return leerPedidos();
+    const p = (e && e.parameter) || {};
+    verificarClave(p.clave);
+    return leerPedidos(listaEstados(p.estados));
   });
 }
 
@@ -72,6 +75,16 @@ function responder(fn) {
     salida = { ok: false, error: String((err && err.message) || err) };
   }
   return ContentService.createTextOutput(JSON.stringify(salida)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// Lista de estados enviada por la app (texto JSON o arreglo). Si no llega o no es válida, se usa ESTADOS.
+function listaEstados(valor) {
+  let lista = valor;
+  try { if (typeof valor === 'string') lista = JSON.parse(valor); } catch (err) { lista = null; }
+  if (!Array.isArray(lista)) return ESTADOS;
+  lista = lista.map(function (x) { return String(x == null ? '' : x).trim(); })
+    .filter(function (x) { return x && x.length <= 40; }).slice(0, 20);
+  return lista.length ? lista : ESTADOS;
 }
 
 function verificarClave(clave) {
@@ -115,16 +128,29 @@ function columnaEstado(titulos) {
 }
 
 // Crea la columna ESTADO al final, con lista desplegable
-function crearColumnaEstado(hoja, filaTit) {
+function crearColumnaEstado(hoja, filaTit, estados) {
   const col = hoja.getLastColumn() + 1;
   hoja.getRange(filaTit + 1, col).setValue(TITULO_ESTADO).setFontWeight('bold');
-  const filas = Math.max(hoja.getMaxRows() - filaTit - 1, 1);
-  const regla = SpreadsheetApp.newDataValidation().requireValueInList(ESTADOS, true).setAllowInvalid(true).build();
-  hoja.getRange(filaTit + 2, col, filas, 1).setDataValidation(regla);
+  aplicarListaEstados(hoja, filaTit, col - 1, estados);
   return col - 1;
 }
 
-function leerPedidos() {
+function aplicarListaEstados(hoja, filaTit, colEstado, estados) {
+  const filas = Math.max(hoja.getMaxRows() - filaTit - 1, 1);
+  const regla = SpreadsheetApp.newDataValidation().requireValueInList(estados, true).setAllowInvalid(true).build();
+  hoja.getRange(filaTit + 2, colEstado + 1, filas, 1).setDataValidation(regla);
+}
+
+// Si la lista desplegable de la hoja no tiene los estados actuales, se actualiza
+function asegurarListaEstados(hoja, filaTit, colEstado, estados) {
+  const regla = hoja.getRange(filaTit + 2, colEstado + 1).getDataValidation();
+  const actual = regla ? regla.getCriteriaValues()[0] : null;
+  if (Array.isArray(actual) && actual.join('|') === estados.join('|')) return;
+  aplicarListaEstados(hoja, filaTit, colEstado, estados);
+}
+
+function leerPedidos(estados) {
+  estados = estados || ESTADOS;
   const hoja = hojaPedidos();
   if (hoja.getLastRow() === 0) throw new Error('La hoja de pedidos está vacía.');
   let valores = hoja.getDataRange().getDisplayValues();
@@ -137,7 +163,7 @@ function leerPedidos() {
       valores = hoja.getDataRange().getDisplayValues();
       colEstado = columnaEstado(valores[filaTit]);
       if (colEstado < 0) {
-        colEstado = crearColumnaEstado(hoja, filaTit);
+        colEstado = crearColumnaEstado(hoja, filaTit, estados);
         SpreadsheetApp.flush();
         valores = hoja.getDataRange().getDisplayValues();
       }
@@ -145,6 +171,7 @@ function leerPedidos() {
       lock.releaseLock();
     }
   }
+  asegurarListaEstados(hoja, filaTit, colEstado, estados);
   const titulos = valores[filaTit];
   const filas = [];
   const sinEstado = [];
@@ -154,23 +181,23 @@ function leerPedidos() {
     if (!conDatos) continue;
     if (String(fila[colEstado]).trim() === '') {
       sinEstado.push(i + 1);
-      fila[colEstado] = ESTADOS[0];
+      fila[colEstado] = estados[0];
     }
     filas.push({ fila: i + 1, valores: fila });
   }
-  if (sinEstado.length) marcarPendientes(hoja, sinEstado, colEstado);
+  if (sinEstado.length) marcarPendientes(hoja, sinEstado, colEstado, estados[0]);
   return {
     hoja: hoja.getName(),
     libro: libroPedidos().getName(),
     encabezados: titulos,
     columnaEstado: colEstado,
-    estados: ESTADOS,
+    estados: estados,
     filas: filas,
   };
 }
 
 // Los pedidos nuevos (estado vacío) quedan como "Pendiente" en la hoja
-function marcarPendientes(hoja, filas, colEstado) {
+function marcarPendientes(hoja, filas, colEstado, pendiente) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -179,7 +206,7 @@ function marcarPendientes(hoja, filas, colEstado) {
     const celdas = filas
       .filter(function (f) { return f <= actuales.length && String(actuales[f - 1][0]).trim() === ''; })
       .map(function (f) { return hoja.getRange(f, colEstado + 1).getA1Notation(); });
-    if (celdas.length) hoja.getRangeList(celdas).setValue(ESTADOS[0]);
+    if (celdas.length) hoja.getRangeList(celdas).setValue(pendiente);
   } finally {
     lock.releaseLock();
   }
@@ -188,7 +215,7 @@ function marcarPendientes(hoja, filas, colEstado) {
 // La app envía la fila y algunos datos del pedido (teléfono, nombre) para comprobar que es el mismo.
 // Si la fila se movió (por ejemplo, se borró una fila de arriba), se busca el pedido por esos datos.
 function guardarEstado(datos) {
-  const estado = ESTADOS.find(function (e) { return normalizar(e) === normalizar(datos.estado); });
+  const estado = listaEstados(datos.estados).find(function (e) { return normalizar(e) === normalizar(datos.estado); });
   if (!estado) throw new Error('Estado no válido: ' + datos.estado);
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);

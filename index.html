@@ -28,6 +28,14 @@
   --low: #b93815;     --low-bg: #fdede6;
   --bad: #b42318;     --bad-bg: #fdeae8;
   --pending: #5a6479; --pending-bg: #edf0f5;
+  /* Estados de pedido */
+  --st-gris: #4b5568;    --st-gris-bg: #e9edf3;
+  --st-naranja: #b54708; --st-naranja-bg: #fdead7;
+  --st-rojo: #b42318;    --st-rojo-bg: #fde4e1;
+  --st-amarillo: #7a5a00; --st-amarillo-bg: #fcf1c2;
+  --st-verde: #0b7a43;   --st-verde-bg: #cdf2dc;
+  --st-celeste: #0369a1; --st-celeste-bg: #dbf0fd;
+  --st-morado: #742284;  --st-morado-bg: #f2e3f6;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 6px 20px rgba(16, 24, 40, .06);
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -50,6 +58,13 @@
     --low: #fb9a6b;     --low-bg: rgba(251, 154, 107, .14);
     --bad: #f7837a;     --bad-bg: rgba(247, 131, 122, .14);
     --pending: #9ba6bd; --pending-bg: rgba(155, 166, 189, .12);
+    --st-gris: #b3bdd0;    --st-gris-bg: rgba(155, 166, 189, .16);
+    --st-naranja: #ffa463; --st-naranja-bg: rgba(255, 140, 60, .17);
+    --st-rojo: #ff8a80;    --st-rojo-bg: rgba(255, 99, 88, .17);
+    --st-amarillo: #f4d35e; --st-amarillo-bg: rgba(244, 211, 94, .16);
+    --st-verde: #4ade94;   --st-verde-bg: rgba(52, 211, 130, .18);
+    --st-celeste: #6cc9ff; --st-celeste-bg: rgba(92, 190, 255, .17);
+    --st-morado: #d197f0;  --st-morado-bg: rgba(190, 120, 235, .19);
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
   }
 }
@@ -220,12 +235,33 @@ th.num { text-align: right; }
 .zone-filter button small { font-weight: 400; color: var(--muted); margin-left: 4px; }
 .zone-filter button:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
 .msg-body .label { margin-top: 12px; }
+.msg-body h3 { font-size: 15px; margin: 18px 0 2px; }
+.msg-section { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--border); }
+.msg-box textarea.msg-short { min-height: 140px; }
+.switch { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.switch input { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 36px; height: 20px; margin: 0; border-radius: 999px; background: var(--border-strong); cursor: pointer; transition: background .15s; }
+.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .15s; }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(16px); }
+.switch input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.chip-filter { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 100%; }
+.chip-filter button { appearance: none; font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+.chip-filter button:hover { background: var(--surface-2); }
+.chip-filter button[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.chip-filter button small { font-weight: 400; color: var(--muted); }
+.chip-filter button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .source-tabs { margin-bottom: 14px; }
 #shStatus { margin-top: 12px; }
-.estado-sel { width: auto; padding: 5px 8px; font-size: 13px; font-weight: 650; border-radius: 8px; border-color: transparent; cursor: pointer; }
-.estado-sel.est-pendiente { background: var(--pending-bg); color: var(--pending); }
-.estado-sel.est-atencion { background: var(--mid-bg); color: var(--mid); }
-.estado-sel.est-atendido { background: var(--ok-bg); color: var(--ok); }
+.est-gris { --st: var(--st-gris); --st-bg: var(--st-gris-bg); }
+.est-naranja { --st: var(--st-naranja); --st-bg: var(--st-naranja-bg); }
+.est-rojo { --st: var(--st-rojo); --st-bg: var(--st-rojo-bg); }
+.est-amarillo { --st: var(--st-amarillo); --st-bg: var(--st-amarillo-bg); --st-dot: #e2b203; }
+.est-verde { --st: var(--st-verde); --st-bg: var(--st-verde-bg); }
+.est-celeste { --st: var(--st-celeste); --st-bg: var(--st-celeste-bg); }
+.est-morado { --st: var(--st-morado); --st-bg: var(--st-morado-bg); }
+.est-otro { --st: var(--muted); --st-bg: var(--surface-2); }
+.est-dot { flex: none; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--st-dot, var(--st)); }
+.estado-sel { width: auto; padding: 5px 8px; font-size: 13px; font-weight: 650; border-radius: 8px; border-color: transparent; cursor: pointer; background: var(--st-bg); color: var(--st); }
 .estado-sel option { background: var(--surface); color: var(--text); }
 .estado-sel:disabled { opacity: .65; cursor: progress; }
 .copy-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -434,7 +470,10 @@ footer.site p { margin: 4px 0; }
     <details class="msg-box" id="msgBox">
       <summary>Mensajes para WhatsApp</summary>
       <div class="msg-body">
-        <p class="hint" style="margin:0">Cada cliente tiene un botón <b>Copiar mensaje</b>. Los clientes de la provincia de Lima y del Callao reciben el mensaje de entrega por motorizado; los demás, el de la agencia Shalom. Puedes editar los dos mensajes: se guardan en este navegador.</p>
+        <p class="hint" style="margin:0">Cada estado tiene su mensaje y un interruptor <b>Mostrar botón Copiar</b>: si está apagado (o el mensaje está vacío), los pedidos en ese estado no muestran el botón. Todo se guarda en este navegador.</p>
+        <h3>Mensajes por estado</h3>
+        <div class="msg-section"><span class="est-dot est-gris"></span>Pendiente<label class="switch"><input type="checkbox" data-estado-copy="Pendiente"> Mostrar botón Copiar</label></div>
+        <p class="hint" style="margin:0">El primer mensaje. Los clientes de la provincia de Lima y del Callao reciben el de motorizado; los demás, el de la agencia Shalom. Con un archivo Excel (sin Google Sheets) siempre se usa este mensaje.</p>
         <label class="label" for="msgTemplate">Provincias (agencia Shalom)</label>
         <p class="hint" style="margin:0 0 8px">Campos: <code>{nombre}</code> primer nombre del cliente, <code>{agencia}</code> nombre de la agencia,
           <code>{detalle}</code> la referencia de la agencia (o su dirección si Shalom no publica referencia),
@@ -444,12 +483,14 @@ footer.site p { margin: 4px 0; }
         <p class="hint" style="margin:0 0 8px">Campos: <code>{nombre}</code> primer nombre del cliente, <code>{direccion_cliente}</code> su dirección y distrito,
           <code>{referencia_cliente}</code> su referencia, <code>{precio}</code> la columna Precio del Excel (por ejemplo 99.90).</p>
         <textarea id="msgTemplateLima" spellcheck="false"></textarea>
+        <div id="estadoMsgs"></div>
+        <p class="hint">En cualquier mensaje puedes usar <code>{nombre}</code>, <code>{agencia}</code>, <code>{detalle}</code>, <code>{direccion_cliente}</code>, <code>{referencia_cliente}</code> y <code>{precio}</code>.</p>
         <div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" id="msgReset">Restaurar mensajes originales</button></div>
       </div>
     </details>
     <div class="stats" id="stats"></div>
     <div class="toolbar">
-      <div class="zone-filter" id="estadoFilter" role="group" aria-label="Filtrar por estado del pedido" hidden></div>
+      <div class="chip-filter" id="estadoFilter" role="group" aria-label="Filtrar por estado del pedido" hidden></div>
       <div class="zone-filter" id="zoneFilter" role="group" aria-label="Filtrar por zona de entrega"></div>
       <input type="search" id="filterText" placeholder="Filtrar por cliente, distrito o agencia…" aria-label="Filtrar resultados">
       <span class="count" id="filterCount"></span>
@@ -1829,14 +1870,14 @@ async function prepareProvider() {
   if (state.provider === 'google') await GoogleGeo.ensure($('#gKey').value.trim());
 }
 
-// opts.auto: pedidos nuevos de Google Sheets. Se procesan primero los más recientes y se omiten los "Atendido".
+// opts.auto: pedidos nuevos de Google Sheets. Se procesan primero los más recientes y se omiten los ya enviados.
 async function processAll(opts = {}) {
   if (state.processing) return;
   if (!state.agencias.length) { if (!opts.auto) toast('Primero carga la base de agencias (paso 1).', 'error'); return; }
   if (!state.mapping.direccion) { if (!opts.auto) toast('Asigna la columna "Dirección Completa".', 'error'); return; }
   let queue = state.results.map((r, i) => i).filter((i) => state.results[i].status !== 'done');
   if (opts.auto) {
-    queue = queue.filter((i) => estadoOf(i) !== 'Atendido').reverse();
+    queue = queue.filter((i) => !noProcesar(estadoOf(i))).reverse();
     if (!queue.length) return;
   }
   if (!queue.length) {
@@ -1909,7 +1950,7 @@ async function stopAutoRun() {
 
 function autoProcess() {
   if (!Sheet.active || state.processing) return;
-  if (state.results.some((r, i) => r.status === 'pending' && estadoOf(i) !== 'Atendido')) processAll({ auto: true });
+  if (state.results.some((r, i) => r.status === 'pending' && !noProcesar(estadoOf(i)))) processAll({ auto: true });
 }
 
 /* ============================================================
@@ -1917,8 +1958,15 @@ function autoProcess() {
    ============================================================ */
 const SHEET_STORAGE = 'buscadorShalom.sheets.v1';
 const SHEET_POLL_MS = 30000;
-const ESTADOS = ['Pendiente', 'En atención', 'Atendido'];
-const ESTADO_CLASS = { 'Pendiente': 'est-pendiente', 'En atención': 'est-atencion', 'Atendido': 'est-atendido' };
+// El primero es el estado de los pedidos nuevos. La hoja recibe esta lista para su lista desplegable.
+const ESTADOS = ['Pendiente', 'En atención', 'Sin respuesta', 'Seguimiento', 'Confirmado', 'Enviado', 'PAGADO'];
+const ESTADO_CLASS = {
+  'Pendiente': 'est-gris', 'En atención': 'est-naranja', 'Sin respuesta': 'est-rojo', 'Seguimiento': 'est-amarillo',
+  'Confirmado': 'est-verde', 'Enviado': 'est-celeste', 'PAGADO': 'est-morado',
+};
+const estadoClass = (e) => ESTADO_CLASS[e] || 'est-otro';
+// Pedidos ya despachados: no se busca su agencia
+const noProcesar = (e) => e === 'Enviado' || e === 'PAGADO';
 
 const Sheet = { active: false, url: '', clave: '', timer: null, loading: false, saving: 0, sig: '', estadoCol: '', lastOk: 0 };
 
@@ -1939,7 +1987,7 @@ async function sheetRequest(payload) {
   try {
     resp = payload
       ? await fetch(Sheet.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...payload, clave: Sheet.clave }) })
-      : await fetch(`${Sheet.url}${Sheet.url.includes('?') ? '&' : '?'}accion=leer&clave=${encodeURIComponent(Sheet.clave)}&t=${Date.now()}`, { cache: 'no-store' });
+      : await fetch(`${Sheet.url}${Sheet.url.includes('?') ? '&' : '?'}accion=leer&clave=${encodeURIComponent(Sheet.clave)}&estados=${encodeURIComponent(JSON.stringify(ESTADOS))}&t=${Date.now()}`, { cache: 'no-store' });
   } catch {
     throw new Error('No se pudo conectar con Google Sheets. Revisa tu internet, que la URL sea la de la aplicación web (termina en /exec) y que su acceso sea "Cualquier usuario".');
   }
@@ -2103,11 +2151,12 @@ async function saveEstado(i, estado) {
     if (h && h !== Sheet.estadoCol) huella[h] = row[h] ?? '';
   });
   r.estadoSaving = estado;
+  r.copied = false;   // el mensaje cambia con el estado
   Sheet.saving++;
   updateRow(i);
   renderEstadoFilter();
   try {
-    const res = await sheetRequest({ accion: 'estado', fila: r.fila, estado, huella });
+    const res = await sheetRequest({ accion: 'estado', fila: r.fila, estado, huella, estados: ESTADOS });
     row[Sheet.estadoCol] = res.estado;
     r.fila = res.fila;
     toast(`${firstName(rowFields(i).nombre) || 'Pedido'}: «${res.estado}» guardado en Google Sheets.`, 'ok');
@@ -2125,19 +2174,21 @@ async function saveEstado(i, estado) {
 function estadoSelectHtml(i) {
   const r = state.results[i];
   const est = estadoOf(i);
-  const opts = ESTADOS.includes(est) ? ESTADOS : [...ESTADOS, est];
-  return `<select class="estado-sel ${ESTADO_CLASS[est] || ''}" data-estado="${i}" aria-label="Estado del pedido"${r.estadoSaving ? ' disabled' : ''}>${opts.map((o) => `<option${o === est ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>${r.estadoSaving ? '<div class="sub">Guardando…</div>' : ''}`;
+  // Un valor escrito a mano en la hoja que no es uno de los estados se muestra como "Elegir estado"
+  const valido = ESTADOS.includes(est);
+  const extra = valido ? '' : '<option value="" selected disabled>Elegir estado</option>';
+  const title = valido ? '' : ` title="En la hoja dice «${esc(est)}», que no es uno de los estados"`;
+  return `<select class="estado-sel ${estadoClass(est)}" data-estado="${i}" aria-label="Estado del pedido"${title}${r.estadoSaving ? ' disabled' : ''}>${extra}${ESTADOS.map((o) => `<option${o === est ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>${r.estadoSaving ? '<div class="sub">Guardando…</div>' : ''}`;
 }
 
 function renderEstadoFilter() {
   const el = $('#estadoFilter');
   el.hidden = !Sheet.active;
   if (!Sheet.active) return;
-  const counts = { all: state.rows.length };
-  ESTADOS.forEach((e) => { counts[e] = 0; });
-  state.rows.forEach((_, i) => { const e = estadoOf(i); if (e in counts) counts[e] += 1; });
-  el.innerHTML = [['all', 'Todos'], ...ESTADOS.map((e) => [e, e])].map(([k, label]) =>
-    `<button type="button" data-estado-filter="${esc(k)}" aria-pressed="${state.filterEstado === k}">${esc(label)}<small>${counts[k]}</small></button>`).join('');
+  const counts = new Map([['all', state.rows.length], ...ESTADOS.map((e) => [e, 0])]);
+  state.rows.forEach((_, i) => { const e = estadoOf(i); if (counts.has(e)) counts.set(e, counts.get(e) + 1); });
+  el.innerHTML = [...counts].map(([k, n]) =>
+    `<button type="button" data-estado-filter="${esc(k)}" aria-pressed="${state.filterEstado === k}">${k === 'all' ? '' : `<span class="est-dot ${estadoClass(k)}"></span>`}${esc(k === 'all' ? 'Todos' : k)}<small>${n}</small></button>`).join('');
 }
 
 /* ============================================================
@@ -2246,8 +2297,11 @@ function rowHtml(i) {
   const lima = isLima(f);
   const price = parsePrice(f.precio);
   // En Lima y Callao el mensaje no depende de la agencia: se puede copiar desde el inicio
-  const copyBtn = lima || (a && (r.status === 'done' || r.status === 'error'))
-    ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="${lima ? 'Copia el mensaje de entrega por motorizado en Lima' : 'Copia el mensaje de WhatsApp con esta agencia'}">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button></div>`
+  const msg = messageFor(i);
+  const msgTitle = !msg ? '' : msg.kind === 'lima' ? 'Copia el mensaje de entrega por motorizado en Lima'
+    : msg.kind === 'agencia' ? 'Copia el mensaje de WhatsApp con esta agencia' : `Copia el mensaje del estado «${msg.estado}»`;
+  const copyBtn = msg
+    ? `<div class="copy-row"><button type="button" class="btn btn-secondary btn-sm btn-copy${r.copied ? ' copied' : ''}" data-copy="${i}" title="${esc(msgTitle)}">${r.copied ? 'Copiado ✓' : 'Copiar mensaje'}</button></div>`
     : '';
   const limaTag = lima
     ? `<div><span class="tag tag-lima" title="Entrega por motorizado: el mensaje no menciona agencia Shalom">Lima · motorizado · ${price != null ? `S/ ${fmtPrice(price)}` : 'sin precio'}</span></div>`
@@ -2589,23 +2643,107 @@ function firstName(full) {
   return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
 }
 
-function buildMessage(i) {
-  if (isLimaRow(i)) return buildLimaMessage(i);
-  const r = state.results[i];
-  const a = r && r.agency;
-  if (!a) return '';
+// Campos disponibles en los mensajes (los de la agencia quedan vacíos si aún no tiene)
+function messageValues(i) {
   const f = rowFields(i);
-  const referencia = a.referencia ? titleCase(a.referencia) : '';
-  const direccion = a.direccion ? titleCase(a.direccion) : '';
-  const values = {
+  const a = state.results[i] && state.results[i].agency;
+  const price = parsePrice(f.precio);
+  const referencia = a && a.referencia ? titleCase(a.referencia) : '';
+  const direccion = a && a.direccion ? titleCase(a.direccion) : '';
+  return {
     nombre: firstName(f.nombre),
-    agencia: a.nombre.toUpperCase(),
+    agencia: a ? a.nombre.toUpperCase() : '',
     referencia,
     direccion,
-    distrito: titleCase(a.distrito),
-    detalle: referencia ? `REFERENCIA-  ${referencia}` : `DIRECCIÓN-  ${direccion}`,
+    distrito: a ? titleCase(a.distrito) : '',
+    detalle: a ? (referencia ? `REFERENCIA-  ${referencia}` : `DIRECCIÓN-  ${direccion}`) : '',
+    direccion_cliente: dedupeJoin([f.direccion, f.distrito]),
+    referencia_cliente: f.referencia,
+    distrito_cliente: f.distrito,
+    precio: price != null ? fmtPrice(price) : '',
   };
-  return fillTemplate(messageTemplate(false), values);
+}
+
+// Mensaje que corresponde al pedido según su estado. null = sin botón de copiar.
+function messageFor(i) {
+  const est = Sheet.active ? estadoOf(i) : 'Pendiente';
+  if (!estadoCopiar[est]) return null;   // botón apagado para este estado
+  if (est === 'Pendiente') {
+    if (isLimaRow(i)) return { kind: 'lima', estado: est, text: buildLimaMessage(i) };
+    const r = state.results[i];
+    if (!r.agency || !(r.status === 'done' || r.status === 'error')) return null;   // aún sin agencia
+    return { kind: 'agencia', estado: est, text: fillTemplate(messageTemplate(false), messageValues(i)) };
+  }
+  const t = estadoMsgs[est] || '';
+  if (!t.trim()) return null;
+  return { kind: 'estado', estado: est, text: fillTemplate(t, messageValues(i)) };
+}
+
+function buildMessage(i) {
+  const m = messageFor(i);
+  return m ? m.text : '';
+}
+
+const ESTADO_MSG_STORAGE = 'buscadorShalom.mensajesEstado.v2';
+// Estados que muestran el botón Copiar mensaje (se cambia con el interruptor de cada estado)
+const DEFAULT_COPIAR = {
+  'Pendiente': true, 'En atención': true, 'Sin respuesta': false, 'Seguimiento': true,
+  'Confirmado': true, 'Enviado': false, 'PAGADO': false,
+};
+const DEFAULT_ESTADO_MSGS = {
+  'En atención': [
+    '✅Tenemos 2 colores disponibles: ROJO Y AZÚL',
+    '¿Cuál deseas que te lo enviémos?',
+  ].join('\n'),
+  'Sin respuesta': '',
+  'Seguimiento': [
+    '¡Hola {nombre}! 😊 Queríamos saber si todavía deseas recibir tu pedido de TodoClick.',
+    '',
+    'Tenemos tu solicitud pendiente de confirmación y nos gustaría prepararlo para el despacho. 📦',
+    '',
+    '✅Por favor, responde *CONFIRMO* si deseas recibir tu pedido.',
+  ].join('\n'),
+  'Confirmado': [
+    '¡Recibido, gracias!',
+    '✅ Tu pedido ya pasa a empaque.',
+    '',
+    'Para generar la guía de envío con Shalom nos piden datos de la persona que recogerá el pedido:',
+    '',
+    '✅ DNI:',
+    '✅NOMBRES COMPLETOS:',
+    '✅Cel:',
+  ].join('\n'),
+  'Enviado': '',
+  'PAGADO': '',
+};
+let estadoMsgs = { ...DEFAULT_ESTADO_MSGS };
+let estadoCopiar = { ...DEFAULT_COPIAR };
+
+function loadEstadoMsgs() {
+  const saved = store.get(ESTADO_MSG_STORAGE, {}) || {};
+  const msgs = saved.mensajes || {};
+  const copiar = saved.copiar || {};
+  estadoMsgs = { ...DEFAULT_ESTADO_MSGS };
+  estadoCopiar = { ...DEFAULT_COPIAR };
+  Object.keys(DEFAULT_ESTADO_MSGS).forEach((k) => { if (typeof msgs[k] === 'string') estadoMsgs[k] = msgs[k]; });
+  ESTADOS.forEach((k) => { if (typeof copiar[k] === 'boolean') estadoCopiar[k] = copiar[k]; });
+}
+
+function saveEstadoMsgs() {
+  // Solo se guarda lo que difiere de lo original
+  const mensajes = {};
+  const copiar = {};
+  Object.keys(DEFAULT_ESTADO_MSGS).forEach((k) => { if (estadoMsgs[k] !== DEFAULT_ESTADO_MSGS[k]) mensajes[k] = estadoMsgs[k]; });
+  ESTADOS.forEach((k) => { if (estadoCopiar[k] !== DEFAULT_COPIAR[k]) copiar[k] = estadoCopiar[k]; });
+  if (Object.keys(mensajes).length || Object.keys(copiar).length) store.set(ESTADO_MSG_STORAGE, { mensajes, copiar });
+  else store.del(ESTADO_MSG_STORAGE);
+}
+
+function renderEstadoMsgs() {
+  $('#estadoMsgs').innerHTML = Object.keys(DEFAULT_ESTADO_MSGS).map((k, n) => `
+    <div class="msg-section"><span class="est-dot ${estadoClass(k)}"></span><label for="msgEst${n}">${esc(k)}</label><label class="switch"><input type="checkbox" data-estado-copy="${esc(k)}"> Mostrar botón Copiar</label></div>
+    <textarea id="msgEst${n}" class="msg-short" data-estado-msg="${esc(k)}" spellcheck="false" placeholder="Escribe aquí el mensaje de este estado. Vacío = sin botón Copiar.">${esc(estadoMsgs[k])}</textarea>`).join('');
+  document.querySelectorAll('[data-estado-copy]').forEach((cb) => { cb.checked = !!estadoCopiar[cb.dataset.estadoCopy]; });
 }
 
 async function copyText(text) {
@@ -2626,13 +2764,13 @@ async function copyText(text) {
 }
 
 async function copyMessage(i) {
-  const text = buildMessage(i);
-  if (!text) { toast('Este cliente todavía no tiene agencia sugerida.', 'error'); return; }
-  if (await copyText(text)) {
+  const msg = messageFor(i);
+  if (!msg) { toast('Este pedido no tiene mensaje para copiar en su estado actual.', 'error'); return; }
+  if (await copyText(msg.text)) {
     state.results[i].copied = true;
     updateRow(i);
     const f = rowFields(i);
-    if (isLima(f) && parsePrice(f.precio) == null) {
+    if (msg.kind === 'lima' && parsePrice(f.precio) == null) {
       toast(`Mensaje copiado, pero ${firstName(f.nombre) || 'este cliente'} no tiene precio en la columna Precio: complétalo en WhatsApp.`, 'error');
     } else {
       toast(`Mensaje copiado para ${firstName(f.nombre) || 'el cliente'}. Pégalo en WhatsApp.`, 'ok');
@@ -2916,11 +3054,34 @@ function init() {
       } catch { /* sin almacenamiento: el cambio dura hasta recargar */ }
     });
   });
+  loadEstadoMsgs();
+  renderEstadoMsgs();
+  let msgTimer;
+  $('#estadoMsgs').addEventListener('input', (e) => {
+    const ta = e.target.closest('[data-estado-msg]');
+    if (!ta) return;
+    estadoMsgs[ta.dataset.estadoMsg] = ta.value;
+    saveEstadoMsgs();
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(() => { if (state.rows.length) renderTable(); }, 300);   // aparece o desaparece el botón
+  });
+  $('#msgBox').addEventListener('change', (e) => {
+    const cb = e.target.closest('[data-estado-copy]');
+    if (!cb) return;
+    estadoCopiar[cb.dataset.estadoCopy] = cb.checked;
+    saveEstadoMsgs();
+    if (state.rows.length) renderTable();
+  });
   $('#msgReset').addEventListener('click', () => {
     templates.forEach(([sel, key, def]) => {
       $(sel).value = def;
       try { localStorage.removeItem(key); } catch { /* sin almacenamiento */ }
     });
+    estadoMsgs = { ...DEFAULT_ESTADO_MSGS };
+    estadoCopiar = { ...DEFAULT_COPIAR };
+    saveEstadoMsgs();
+    renderEstadoMsgs();
+    if (state.rows.length) renderTable();
     toast('Se restauraron los mensajes originales.');
   });
   $('#deptList').innerHTML = DEPARTAMENTOS.map((d) => `<option value="${esc(d)}">`).join('');
@@ -2946,7 +3107,7 @@ function init() {
 }
 
 // Acceso para pruebas desde la consola del navegador
-window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber, buildMessage, Sheet, estadoOf };
+window.BuscadorShalom = { state, haversineKm, cleanAddress, extractLandmark, extractZona, expandCity, buildSearchAddress, parseCoords, normDept, sameDept, autoMap, textSim, placeOf, districtArea, geocodeClient, Geo, pickCandidate, cleanAddress, streetPart, lastNumber, buildMessage, messageFor, Sheet, estadoOf };
 
 init();
 })();
