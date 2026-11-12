@@ -2573,7 +2573,7 @@ function updateFilterCount() {
   $('#filterCount').textContent = visible === total ? `${total} filas` : `${visible} de ${total} filas`;
   const empty = $('#tbody .empty-row');
   if (!visible && total) {
-    if (!empty) $('#tbody').insertAdjacentHTML('beforeend', '<tr class="empty-row"><td colspan="${Sheet.active ? 11 : 9}" class="empty">No hay filas con este filtro.</td></tr>');
+    if (!empty) $('#tbody').insertAdjacentHTML('beforeend', `<tr class="empty-row"><td colspan="${Sheet.active ? 11 : 9}" class="empty">No hay filas con este filtro.</td></tr>`);
   } else if (empty) {
     empty.remove();
   }
