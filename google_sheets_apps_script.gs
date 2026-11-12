@@ -63,6 +63,7 @@ function doPost(e) {
     const datos = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     verificarClave(datos.clave);
     if (datos.accion === 'estado') return guardarEstado(datos);
+    if (datos.accion === 'estados') return guardarEstados(datos);
     throw new Error('Acción no reconocida.');
   });
 }
@@ -212,39 +213,80 @@ function marcarPendientes(hoja, filas, colEstado, pendiente) {
   }
 }
 
-// La app envía la fila y algunos datos del pedido (teléfono, nombre) para comprobar que es el mismo.
-// Si la fila se movió (por ejemplo, se borró una fila de arriba), se busca el pedido por esos datos.
-function guardarEstado(datos) {
+function validarEstado(datos) {
   const estado = listaEstados(datos.estados).find(function (e) { return normalizar(e) === normalizar(datos.estado); });
   if (!estado) throw new Error('Estado no válido: ' + datos.estado);
+  return estado;
+}
+
+// Lee la hoja una vez para ubicar uno o varios pedidos
+function contextoHoja() {
+  const hoja = hojaPedidos();
+  const valores = hoja.getDataRange().getDisplayValues();
+  const filaTit = filaTitulos(valores);
+  const titulos = valores[filaTit];
+  const colEstado = columnaEstado(titulos);
+  if (colEstado < 0) throw new Error('No se encontró la columna ' + TITULO_ESTADO + '. Actualiza el buscador.');
+  return { hoja: hoja, valores: valores, filaTit: filaTit, titulos: titulos, colEstado: colEstado };
+}
+
+// Devuelve el índice (desde 0) de la fila del pedido. La app envía la fila y algunos datos del pedido
+// (teléfono, nombre) para comprobar que es el mismo; si la fila se movió (por ejemplo, se borró una
+// fila de arriba), se busca el pedido por esos datos.
+function ubicarPedido(ctx, fila, huellaDatos) {
+  const huella = Object.keys(huellaDatos || {}).map(function (t) {
+    return { col: ctx.titulos.findIndex(function (x) { return normalizar(x) === normalizar(t); }), valor: normalizar(huellaDatos[t]) };
+  }).filter(function (h) { return h.col >= 0; });
+  const coincide = function (f) {
+    return huella.every(function (h) { return normalizar(f[h.col]) === h.valor; });
+  };
+  const indice = Number(fila) - 1;
+  if (indice > ctx.filaTit && indice < ctx.valores.length && coincide(ctx.valores[indice])) return indice;
+  const candidatos = [];
+  if (huella.length) {
+    for (let i = ctx.filaTit + 1; i < ctx.valores.length; i++) if (coincide(ctx.valores[i])) candidatos.push(i);
+  }
+  if (candidatos.length !== 1) throw new Error('El pedido cambió de lugar en la hoja. Presiona "Actualizar" y vuelve a intentarlo.');
+  return candidatos[0];
+}
+
+function guardarEstado(datos) {
+  const estado = validarEstado(datos);
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const hoja = hojaPedidos();
-    const valores = hoja.getDataRange().getDisplayValues();
-    const filaTit = filaTitulos(valores);
-    const titulos = valores[filaTit];
-    const colEstado = columnaEstado(titulos);
-    if (colEstado < 0) throw new Error('No se encontró la columna ' + TITULO_ESTADO + '. Actualiza el buscador.');
-
-    const huella = Object.keys(datos.huella || {}).map(function (t) {
-      return { col: titulos.findIndex(function (x) { return normalizar(x) === normalizar(t); }), valor: normalizar(datos.huella[t]) };
-    }).filter(function (h) { return h.col >= 0; });
-    const coincide = function (fila) {
-      return huella.every(function (h) { return normalizar(fila[h.col]) === h.valor; });
-    };
-
-    let indice = Number(datos.fila) - 1;
-    if (!(indice > filaTit && indice < valores.length && coincide(valores[indice]))) {
-      const candidatos = [];
-      if (huella.length) {
-        for (let i = filaTit + 1; i < valores.length; i++) if (coincide(valores[i])) candidatos.push(i);
-      }
-      if (candidatos.length !== 1) throw new Error('El pedido cambió de lugar en la hoja. Presiona "Actualizar" y vuelve a intentarlo.');
-      indice = candidatos[0];
-    }
-    hoja.getRange(indice + 1, colEstado + 1).setValue(estado);
+    const ctx = contextoHoja();
+    const indice = ubicarPedido(ctx, datos.fila, datos.huella);
+    ctx.hoja.getRange(indice + 1, ctx.colEstado + 1).setValue(estado);
     return { fila: indice + 1, estado: estado };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Varios pedidos al mismo estado, en una sola escritura. Devuelve el resultado de cada uno.
+function guardarEstados(datos) {
+  const estado = validarEstado(datos);
+  const pedidos = Array.isArray(datos.pedidos) ? datos.pedidos.slice(0, 1000) : [];
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const ctx = contextoHoja();
+    const usadas = {};
+    const resultados = pedidos.map(function (p) {
+      try {
+        const indice = ubicarPedido(ctx, p && p.fila, p && p.huella);
+        if (usadas[indice]) throw new Error('Pedido repetido.');
+        usadas[indice] = true;
+        return { ok: true, fila: indice + 1 };
+      } catch (err) {
+        return { ok: false, error: String((err && err.message) || err) };
+      }
+    });
+    const celdas = resultados.filter(function (r) { return r.ok; })
+      .map(function (r) { return ctx.hoja.getRange(r.fila, ctx.colEstado + 1).getA1Notation(); });
+    if (celdas.length) ctx.hoja.getRangeList(celdas).setValue(estado);
+    return { estado: estado, resultados: resultados };
   } finally {
     lock.releaseLock();
   }

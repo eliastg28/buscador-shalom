@@ -209,6 +209,15 @@ table.results tbody tr.cat-processing { background: var(--accent-soft); }
 .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 th.num { text-align: right; }
 .c-idx { color: var(--muted); width: 34px; white-space: nowrap; }
+.c-sel { width: 34px; }
+.c-sel input, #selAll { width: 18px; height: 18px; margin: 2px 0 0; cursor: pointer; accent-color: var(--accent); }
+table.results tbody tr.is-selected td { background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface)); }
+table.results tbody tr.is-selected .btn-secondary { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.bulk-bar { position: sticky; bottom: 12px; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--accent); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); font-size: 14px; }
+.bulk-bar select { width: auto; }
+.bulk-bar .muted { color: var(--muted); font-size: 13px; }
+.bulk-bar .spacer { flex: 1; }
+body.has-bulk #toasts { bottom: 96px; }
 .col-client { min-width: 120px; }
 .col-wa { white-space: nowrap; }
 .col-addr { min-width: 180px; }
@@ -334,6 +343,8 @@ footer.site p { margin: 4px 0; }
   table.results td::before { content: attr(data-label); grid-row: 1 / span 8; font-size: 12px; font-weight: 650; color: var(--muted); padding-top: 2px; }
   table.results td > * { grid-column: 2; justify-self: start; max-width: 100%; }
   table.results td.c-idx { display: none; }
+  table.results td.c-sel { width: 100%; }
+  body.has-bulk #toasts { bottom: 170px; }
   table.results td.empty { display: block; }
   table.results td.empty::before { content: none; }
   .num { text-align: left; }
@@ -510,6 +521,7 @@ footer.site p { margin: 4px 0; }
       <table class="results">
         <thead>
           <tr>
+            <th id="thSel" class="c-sel" hidden><input type="checkbox" id="selAll" aria-label="Seleccionar todos los pedidos visibles" title="Seleccionar todos los pedidos visibles (con el filtro actual)"></th>
             <th>#</th>
             <th>Cliente</th>
             <th id="thEstado" hidden>Estado</th>
@@ -525,6 +537,16 @@ footer.site p { margin: 4px 0; }
         <tbody id="tbody"></tbody>
       </table>
     </div>
+    <div class="bulk-bar" id="bulkBar" role="region" aria-label="Cambiar el estado de los pedidos seleccionados" hidden>
+      <strong id="bulkCount"></strong>
+      <label for="bulkEstado">Cambiar estado a</label>
+      <select id="bulkEstado"></select>
+      <button type="button" class="btn btn-primary btn-sm" id="bulkApply">Aplicar</button>
+      <span class="muted" id="bulkInfo"></span>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-ghost btn-sm" id="bulkClear">Quitar selección</button>
+    </div>
+    <p class="hint" id="bulkHint" hidden>Para cambiar varios pedidos a la vez, márcalos en la primera columna. Con <b>Shift</b> marcas todos los que hay entre dos clics, y la casilla del título marca todos los visibles (por ejemplo, filtra por <b>Pendiente</b> y márcalos todos).</p>
     <p class="hint">La distancia es en línea recta (fórmula de Haversine). Revisa las filas marcadas como <b>Por revisar</b> o <b>No ubicados</b> con el botón <b>Corregir</b>.</p>
   </section>
 
@@ -2167,15 +2189,21 @@ function applySheetData(data, first) {
   autoProcess();
 }
 
+// Datos con los que la hoja comprueba que la fila siga siendo este pedido
+function huellaOf(i) {
+  const huella = {};
+  ['whatsapp', 'nombre'].forEach((k) => {
+    const h = state.mapping[k];
+    if (h && h !== Sheet.estadoCol) huella[h] = state.rows[i][h] ?? '';
+  });
+  return huella;
+}
+
 async function saveEstado(i, estado) {
   const r = state.results[i];
   if (!Sheet.active || r.estadoSaving) return;
   const row = state.rows[i];
-  const huella = {};   // la hoja comprueba que la fila siga siendo este pedido
-  ['whatsapp', 'nombre'].forEach((k) => {
-    const h = state.mapping[k];
-    if (h && h !== Sheet.estadoCol) huella[h] = row[h] ?? '';
-  });
+  const huella = huellaOf(i);
   r.estadoSaving = estado;
   r.copied = false;   // el mensaje cambia con el estado
   r.sent = false;
@@ -2195,6 +2223,119 @@ async function saveEstado(i, estado) {
     const k = state.results.indexOf(r);
     if (k >= 0) updateRow(k);
     renderEstadoFilter();
+  }
+}
+
+/* ---------- Selección de varios pedidos ---------- */
+let lastSel = null;   // última fila marcada, para Shift + clic
+
+function visibleRows() {
+  return [...document.querySelectorAll('#tbody tr[data-i]:not([hidden])')].map((tr) => Number(tr.dataset.i));
+}
+
+function setSelected(i, on) {
+  const r = state.results[i];
+  if (!r || r.estadoSaving) return;
+  r.selected = on;
+  const tr = document.querySelector(`#tbody tr[data-i="${i}"]`);
+  if (tr) {
+    tr.classList.toggle('is-selected', on);
+    const cb = tr.querySelector('[data-sel]');
+    if (cb) cb.checked = on;
+  }
+}
+
+function onSelectClick(e, i) {
+  const on = e.target.checked;
+  if (e.shiftKey && lastSel != null) {
+    const vis = visibleRows();
+    const a = vis.indexOf(lastSel);
+    const b = vis.indexOf(i);
+    if (a >= 0 && b >= 0) vis.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((k) => setSelected(k, on));
+  }
+  setSelected(i, on);
+  lastSel = i;
+  renderBulkBar();
+}
+
+function clearSelection() {
+  state.results.forEach((r) => { r.selected = false; });
+  lastSel = null;
+  document.querySelectorAll('#tbody tr.is-selected').forEach((tr) => tr.classList.remove('is-selected'));
+  document.querySelectorAll('#tbody [data-sel]').forEach((cb) => { cb.checked = false; });
+  renderBulkBar();
+}
+
+function renderBulkBar() {
+  const bar = $('#bulkBar');
+  $('#bulkHint').hidden = !Sheet.active;
+  if (!Sheet.active) { bar.hidden = true; document.body.classList.remove('has-bulk'); return; }
+  const sel = state.results.map((r, i) => (r.selected ? i : -1)).filter((i) => i >= 0);
+  const vis = new Set(visibleRows());
+  const visSel = sel.filter((i) => vis.has(i)).length;
+  // Casilla del título: marcada si están todos los visibles, a medias si hay algunos
+  const all = $('#selAll');
+  all.checked = vis.size > 0 && visSel === vis.size;
+  all.indeterminate = visSel > 0 && visSel < vis.size;
+  bar.hidden = !sel.length;
+  document.body.classList.toggle('has-bulk', !!sel.length);   // los avisos suben para no tapar la barra
+  if (!sel.length) return;
+  $('#bulkCount').textContent = sel.length === 1 ? '1 pedido seleccionado' : `${sel.length} pedidos seleccionados`;
+  const ocultos = sel.length - visSel;
+  $('#bulkInfo').textContent = ocultos ? `(${ocultos} no se ven con el filtro actual)` : '';
+  const bs = $('#bulkEstado');
+  if (!bs.options.length) bs.innerHTML = ESTADOS.map((e) => `<option>${esc(e)}</option>`).join('');
+  const busy = Sheet.saving > 0;
+  $('#bulkApply').disabled = busy;
+  bs.disabled = busy;
+}
+
+async function applyBulkEstado() {
+  const estado = $('#bulkEstado').value;
+  const idx = state.results.map((r, i) => (r.selected ? i : -1)).filter((i) => i >= 0);
+  if (!idx.length || !Sheet.active || Sheet.saving) return;
+  if (!window.confirm(`¿Cambiar ${idx.length === 1 ? '1 pedido' : `${idx.length} pedidos`} a «${estado}»? Se guardará en Google Sheets.`)) return;
+  const items = idx.map((i) => ({ r: state.results[i], row: state.rows[i], fila: state.results[i].fila, huella: huellaOf(i) }));
+  items.forEach(({ r }) => { r.estadoSaving = estado; r.copied = false; r.sent = false; });
+  Sheet.saving++;
+  renderTable();
+  renderEstadoFilter();
+  const errores = [];
+  const ok = (it, fila) => { it.row[Sheet.estadoCol] = estado; it.r.fila = fila; it.r.selected = false; };
+  try {
+    let res = null;
+    try {
+      res = await sheetRequest({ accion: 'estados', estado, estados: ESTADOS, pedidos: items.map(({ fila, huella }) => ({ fila, huella })) });
+    } catch (err) {
+      if (!/acci[oó]n no reconocida/i.test(err.message)) throw err;
+      res = null;   // Apps Script anterior: se guarda uno por uno
+    }
+    if (res) {
+      res.resultados.forEach((x, k) => { if (x.ok) ok(items[k], x.fila); else errores.push(x.error); });
+    } else {
+      for (let k = 0; k < items.length; k++) {
+        $('#bulkInfo').textContent = `Guardando ${k + 1} de ${items.length}…`;
+        try {
+          const x = await sheetRequest({ accion: 'estado', fila: items[k].fila, estado, huella: items[k].huella, estados: ESTADOS });
+          ok(items[k], x.fila);
+        } catch (err) {
+          errores.push(err.message);
+        }
+      }
+    }
+  } catch (err) {
+    errores.push(err.message);   // no se guardó nada: siguen seleccionados
+  } finally {
+    items.forEach(({ r }) => { r.estadoSaving = null; });
+    Sheet.saving--;
+    renderTable();
+    renderEstadoFilter();
+  }
+  const okCount = items.filter(({ r }) => !r.selected).length;
+  if (!errores.length) {
+    toast(`${okCount === 1 ? '1 pedido cambiado' : `${okCount} pedidos cambiados`} a «${estado}» en Google Sheets.`, 'ok');
+  } else {
+    toast(`${okCount} de ${items.length} cambiados a «${estado}». Los demás siguen seleccionados: ${errores[0]}`, 'error');
   }
 }
 
@@ -2340,6 +2481,7 @@ function rowHtml(i) {
     ? `<div class="maplinks"><a href="${esc(mapsAgencyUrl(a))}" target="_blank" rel="noopener" title="Abrir la ficha de la agencia en Google Maps">Ver en Maps</a><a href="${SHALOM_AGENCIAS_URL}" target="_blank" rel="noopener" data-shalom="${i}" title="Abre shalom.com.pe/agencias y copia el distrito para pegarlo en su buscador">Ver en Shalom</a>${r.geo ? `<a href="${routeUrl(r.geo, a)}" target="_blank" rel="noopener" title="Cómo llegar desde la ubicación del cliente hasta la agencia">Ver ruta</a>` : ''}</div>`
     : '—';
   return `
+    ${Sheet.active ? `<td class="c-sel" data-label="Seleccionar"><input type="checkbox" data-sel="${i}"${r.selected ? ' checked' : ''}${r.estadoSaving ? ' disabled' : ''} aria-label="Seleccionar el pedido de ${esc(f.nombre || `la fila ${i + 1}`)}"></td>` : ''}
     <td class="c-idx" data-label="#">${i + 1}</td>
     <td class="col-client" data-label="Cliente"><strong>${esc(f.nombre || '(sin nombre)')}</strong></td>
     ${Sheet.active ? `<td class="col-estado" data-label="Estado">${estadoSelectHtml(i)}</td>` : ''}
@@ -2399,17 +2541,21 @@ function rowMatchesFilter(i) {
   return true;
 }
 
+const rowClass = (i) => `cat-${category(state.results[i])}${Sheet.active && state.results[i].selected ? ' is-selected' : ''}`;
+
 function renderTable() {
   $('#thEstado').hidden = !Sheet.active;
+  $('#thSel').hidden = !Sheet.active;
   const tbody = $('#tbody');
-  tbody.innerHTML = state.rows.map((_, i) => `<tr data-i="${i}" class="cat-${category(state.results[i])}"${rowMatchesFilter(i) ? '' : ' hidden'}>${rowHtml(i)}</tr>`).join('');
+  tbody.innerHTML = state.rows.map((_, i) => `<tr data-i="${i}" class="${rowClass(i)}"${rowMatchesFilter(i) ? '' : ' hidden'}>${rowHtml(i)}</tr>`).join('');
   updateFilterCount();
+  renderBulkBar();
 }
 
 function updateRow(i) {
   const tr = document.querySelector(`#tbody tr[data-i="${i}"]`);
   if (!tr) return;
-  tr.className = `cat-${category(state.results[i])}`;
+  tr.className = rowClass(i);
   tr.innerHTML = rowHtml(i);
   tr.hidden = !rowMatchesFilter(i);
   if (state.processing && state.results[i].status === 'processing' && !tr.hidden) {
@@ -2427,7 +2573,7 @@ function updateFilterCount() {
   $('#filterCount').textContent = visible === total ? `${total} filas` : `${visible} de ${total} filas`;
   const empty = $('#tbody .empty-row');
   if (!visible && total) {
-    if (!empty) $('#tbody').insertAdjacentHTML('beforeend', '<tr class="empty-row"><td colspan="${Sheet.active ? 10 : 9}" class="empty">No hay filas con este filtro.</td></tr>');
+    if (!empty) $('#tbody').insertAdjacentHTML('beforeend', '<tr class="empty-row"><td colspan="${Sheet.active ? 11 : 9}" class="empty">No hay filas con este filtro.</td></tr>');
   } else if (empty) {
     empty.remove();
   }
@@ -3028,6 +3174,17 @@ function bindEvents() {
     renderEstadoFilter();
     renderTable();
   });
+  $('#tbody').addEventListener('click', (e) => {
+    const cb = e.target.closest('[data-sel]');
+    if (cb) onSelectClick(e, Number(cb.dataset.sel));
+  });
+  $('#selAll').addEventListener('change', (e) => {
+    const on = e.target.checked;
+    visibleRows().forEach((i) => setSelected(i, on));
+    renderBulkBar();
+  });
+  $('#bulkApply').addEventListener('click', applyBulkEstado);
+  $('#bulkClear').addEventListener('click', clearSelection);
   $('#tbody').addEventListener('change', (e) => {
     const sel = e.target.closest('[data-estado]');
     if (sel) saveEstado(Number(sel.dataset.estado), sel.value);
